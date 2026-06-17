@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>حاسبة تكلفة البالتة الخشبية</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --wood: #8B5E3C; --wood-dark: #5C3D1E; --wood-light: #C49A6C;
+    --sawdust: #F5EDD8; --sawdust-dark: #EAD9B8; --ink: #1A1109;
+    --muted: #7A6650; --green: #3A7D44; --red: #C0392B; --white: #FFFDF8;
+    --shadow: 0 2px 16px rgba(90,50,10,0.12); --radius: 10px;
+  }
+  body { font-family: 'Cairo', sans-serif; background: var(--sawdust); color: var(--ink); min-height: 100vh; padding: 0 0 60px; }
+  header {
+    background: linear-gradient(135deg, #2C1A0E 0%, #5C3D1E 60%, #3a2410 100%);
+    color: var(--sawdust); text-align: center; position: relative; overflow: hidden; padding: 0;
+  }
+  header::before {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(255,255,255,0.015) 60px, rgba(255,255,255,0.015) 61px),
+                repeating-linear-gradient(0deg,  transparent, transparent 60px, rgba(255,255,255,0.015) 60px, rgba(255,255,255,0.015) 61px);
+  }
+  header::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent, var(--wood-light), #f0c070, var(--wood-light), transparent);
+  }
+  .header-inner { position: relative; padding: 20px 24px 24px; }
+  .header-top-bar {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    margin-bottom: 16px; padding-bottom: 16px;
+    border-bottom: 1px solid rgba(196,154,108,0.35);
+  }
+  .header-logo { font-size: 2.4rem; line-height: 1; }
+  .header-divider { width: 1px; height: 40px; background: rgba(196,154,108,0.4); }
+  .header-company-name { font-size: 1.3rem; font-weight: 900; color: #FFE4B5; letter-spacing: 0.5px; line-height: 1.3; }
+  .header-company-sub { font-size: 0.72rem; color: var(--wood-light); letter-spacing: 2.5px; margin-top: 3px; }
+  header h1 { font-size: 1.4rem; font-weight: 700; color: var(--sawdust); position: relative; letter-spacing: 0.3px; }
+  header p { font-size: 0.82rem; color: var(--wood-light); margin-top: 5px; position: relative; }
+  header .company-name { display: none; }
+  .container { max-width: 920px; margin: 0 auto; padding: 0 16px; }
+  .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); margin-top: 20px; overflow: hidden; }
+  .card-header { background: var(--wood); color: var(--white); padding: 12px 20px; font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .card-body { padding: 20px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  label { font-size: 0.82rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+  input[type="text"], input[type="number"] { border: 1.5px solid var(--sawdust-dark); border-radius: 7px; padding: 9px 11px; font-family: 'Cairo', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--sawdust); transition: border-color 0.2s; width: 100%; }
+  input:focus { outline: none; border-color: var(--wood); background: var(--white); }
+  input[readonly] { background: #f0e8d8; color: var(--wood-dark); font-weight: 700; cursor: default; }
+  .unit { font-size: 0.74rem; color: var(--muted); margin-top: 2px; }
+
+  /* PIECES TABLE */
+  .pieces-table { width: 100%; border-collapse: collapse; }
+  .pieces-table th { font-size: 0.78rem; font-weight: 700; color: var(--white); background: var(--wood); text-align: center; padding: 9px 6px; }
+  .pieces-table th:first-child { text-align: right; padding-right: 12px; }
+  .pieces-table td { padding: 7px 5px; border-bottom: 1px solid var(--sawdust); text-align: center; }
+  .pieces-table td:first-child { font-weight: 700; font-size: 0.9rem; color: var(--wood-dark); padding-right: 12px; text-align: right; white-space: nowrap; }
+  .pieces-table input[type="number"] { padding: 7px 6px; font-size: 0.9rem; text-align: center; }
+  .pieces-table .vol-cell { font-weight: 700; color: var(--wood); font-size: 0.88rem; }
+  .total-row td { background: var(--sawdust-dark); font-weight: 700; border-top: 2px solid var(--wood-light); }
+  .row-label { display: flex; align-items: center; gap: 6px; }
+  .row-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* COSTS TABLE */
+  .costs-table { width: 100%; border-collapse: collapse; }
+  .costs-table th { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-align: right; padding: 6px 10px; border-bottom: 2px solid var(--sawdust-dark); }
+  .costs-table td { padding: 8px 10px; border-bottom: 1px solid var(--sawdust); }
+  .cost-label { font-weight: 600; font-size: 0.95rem; }
+  .cost-icon { font-size: 1.1rem; margin-left: 6px; }
+  .costs-table input[type="number"] { padding: 7px 10px; font-size: 0.93rem; }
+
+  /* TOTAL EXTRA ROW */
+  .extra-total-row { display: flex; justify-content: space-between; align-items: center; background: var(--sawdust-dark); border-radius: 8px; padding: 11px 14px; margin-top: 12px; font-weight: 700; font-size: 1rem; color: var(--wood-dark); }
+  .extra-total-row span:last-child { direction: ltr; font-size: 1.05rem; }
+
+  .divider { height: 1px; background: var(--sawdust-dark); margin: 16px 0; }
+
+  /* WOOD SUMMARY */
+  .wood-summary { background: var(--sawdust); border: 1.5px solid var(--wood-light); border-radius: 8px; padding: 12px 16px; margin-top: 14px; display: flex; gap: 24px; flex-wrap: wrap; }
+  .wood-summary-item { display: flex; flex-direction: column; }
+  .wood-summary-item span:first-child { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+  .wood-summary-item span:last-child { font-size: 1.1rem; font-weight: 900; color: var(--wood-dark); }
+
+  /* RESULT */
+  .result-card { background: var(--wood-dark); border-radius: var(--radius); box-shadow: var(--shadow); margin-top: 20px; color: var(--white); overflow: hidden; }
+  .result-header { background: rgba(0,0,0,0.2); padding: 14px 22px; font-size: 1rem; font-weight: 700; }
+  .result-body { padding: 22px; }
+  .breakdown { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+  .breakdown-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 14px; background: rgba(255,255,255,0.07); border-radius: 7px; font-size: 0.93rem; }
+  .breakdown-row.sub { font-size: 0.82rem; opacity: 0.8; padding: 6px 14px 6px 22px; }
+  .breakdown-row.highlight { background: rgba(255,255,255,0.15); font-weight: 700; font-size: 1rem; }
+  .breakdown-row.grand { background: var(--wood-light); color: var(--wood-dark); font-weight: 900; font-size: 1.15rem; border-radius: 8px; margin-top: 4px; }
+  .val { font-weight: 700; direction: ltr; }
+
+  /* BUTTONS */
+  .btn-row { display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
+  button { font-family: 'Cairo', sans-serif; font-size: 0.97rem; font-weight: 700; padding: 11px 24px; border: none; border-radius: 8px; cursor: pointer; transition: all 0.18s; }
+  .btn-calc { background: var(--wood); color: var(--white); flex: 1; font-size: 1.05rem; }
+  .btn-calc:hover { background: var(--wood-dark); }
+  .btn-reset { background: var(--sawdust-dark); color: var(--muted); }
+  .btn-print { background: var(--green); color: var(--white); }
+  .btn-save { background: #3A7D44; color: var(--white); }
+  .btn-pdf { background: #C0392B; color: var(--white); }
+  .btn-whatsapp { background: #25D366; color: var(--white); }
+  .btn-pdf:hover { background: #a93226; }
+  .btn-whatsapp:hover { background: #1ebe57; }
+
+  /* SAVED */
+  .saved-list { display: flex; flex-direction: column; gap: 8px; }
+  .saved-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--sawdust); border-radius: 8px; border: 1.5px solid var(--sawdust-dark); }
+  .saved-item-name { font-weight: 700; }
+  .saved-item-company { font-size: 0.8rem; color: var(--muted); }
+  .saved-item-actions { display: flex; gap: 6px; }
+  .btn-small { font-size: 0.78rem; padding: 4px 10px; border-radius: 5px; }
+  .btn-load { background: var(--wood-light); color: var(--wood-dark); }
+  .btn-del { background: #f2d5d2; color: var(--red); }
+  .empty-state { text-align: center; color: var(--muted); font-size: 0.88rem; padding: 18px; }
+  .tag { display: inline-block; background: var(--sawdust-dark); color: var(--muted); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; margin-right: 4px; }
+
+  @media (max-width: 600px) {
+    .form-grid, .form-grid.three { grid-template-columns: 1fr; }
+    .pieces-table th, .pieces-table td { font-size: 0.76rem; padding: 5px 3px; }
+  }
+  @media print {
+    body { background: white; }
+    .no-print { display: none !important; }
+    .result-card { color: black; background: #f5f5f5; }
+    .breakdown-row.grand { background: #ddd; }
+  }
+</style>
+</head>
+<body>
+<div id="login-page" style="display:none;min-height:100vh;align-items:center;justify-content:center;background:#1a1a2e;padding:20px">
+  <div style="background:#16213e;border:1px solid #8B6914;border-radius:16px;padding:32px 28px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-size:2.5rem;margin-bottom:8px">🪵</div>
+      <h1 style="color:#c9a84c;font-size:1.15rem;font-weight:900;margin-bottom:4px">حاسبة تكلفة البالتة</h1>
+      <p style="color:#64748B;font-size:.75rem">سجّل دخولك للمتابعة</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:.72rem;color:#94A3B8;font-weight:600;display:block;margin-bottom:5px">👤 اسم المستخدم</label>
+        <input id="loginUser" type="text" placeholder="username" dir="ltr"
+          style="width:100%;background:#0f1117;border:1px solid #2a2d3e;border-radius:8px;padding:10px 12px;color:#fff;font-family:Cairo,sans-serif;font-size:.9rem;outline:none;box-sizing:border-box"
+          onfocus="this.style.borderColor='#c9a84c'" onblur="this.style.borderColor='#2a2d3e'"
+          onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+      </div>
+      <div>
+        <label style="font-size:.72rem;color:#94A3B8;font-weight:600;display:block;margin-bottom:5px">🔒 كلمة المرور</label>
+        <input id="loginPass" type="password" placeholder="password" dir="ltr"
+          style="width:100%;background:#0f1117;border:1px solid #2a2d3e;border-radius:8px;padding:10px 12px;color:#fff;font-family:Cairo,sans-serif;font-size:.9rem;outline:none;box-sizing:border-box"
+          onfocus="this.style.borderColor='#c9a84c'" onblur="this.style.borderColor='#2a2d3e'"
+          onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div id="loginErr" style="color:#F87171;font-size:.75rem;text-align:center;display:none">❌ اسم المستخدم أو كلمة المرور غلط</div>
+      <button onclick="doLogin()" id="loginBtn"
+        style="background:linear-gradient(135deg,#c9a84c,#e0c068);border:none;border-radius:8px;padding:12px;color:#1a1a2e;font-family:Cairo,sans-serif;font-size:.95rem;font-weight:900;cursor:pointer;margin-top:4px">
+        دخول ←
+      </button>
+    </div>
+    <p style="text-align:center;color:#2a2d3e;font-size:.65rem;margin-top:20px">نظام خاص — غير مرخص للعموم</p>
+  </div>
+</div>
+
+<header>
+  <div class="header-inner">
+    <div class="header-top-bar">
+      <div class="header-logo">🏭</div>
+      <div class="header-divider"></div>
+      <div>
+        <div class="header-company-name">الشركة المصرية الخليجية للصناعات الخشبية</div>
+        <div class="header-company-sub">EGYPTIAN GULF WOOD INDUSTRIES</div>
+      </div>
+    </div>
+    <h1>🪵 حاسبة تكلفة البالتة الخشبية</h1>
+    <p>احسب تكلفة الإنتاج بدقة — من مقاسات القطع حتى سعر البيع</p>
+    <button onclick="doLogout()" style="margin-top:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:6px 16px;color:#fff;font-family:Cairo,sans-serif;font-size:.8rem;cursor:pointer">🚪 تسجيل الخروج</button>
+  </div>
+</header>
+
+<div class="nav-bar" style="background:#5C3D1E;padding:10px 20px;display:flex;gap:10px;">
+  <button style="font-family:Cairo,sans-serif;font-weight:700;padding:7px 18px;border:none;border-radius:7px;cursor:pointer;background:#C49A6C;color:#5C3D1E;" onclick="void(0)">🧮 الحاسبة</button>
+  <button style="font-family:Cairo,sans-serif;font-weight:700;padding:7px 18px;border:none;border-radius:7px;cursor:pointer;background:rgba(255,255,255,0.1);color:#F5EDD8;" onclick="location.href='archive.html'">📁 الأرشيف</button>
+</div>
+
+<div class="container">
+
+  <!-- SPEC INFO -->
+  <div class="card no-print">
+    <div class="card-header"><span>📋</span> بيانات المواصفة والشركة</div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>اسم المواصفة / الموديل</label>
+          <input type="text" id="specName" placeholder="مثال: بالتة أوروبية EUR1">
+        </div>
+        <div class="form-group">
+          <label>اسم الشركة / العميل</label>
+          <input type="text" id="companyName" placeholder="مثال: شركة الشرق للتعبئة">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WOOD PRICE -->
+  <div class="card">
+    <div class="card-header"><span>🌲</span> سعر الخشب</div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>سعر المتر المكعب من الخشب</label>
+          <input type="number" id="woodPrice" placeholder="0" min="0" step="0.01" oninput="autoCalc()">
+          <span class="unit">جنيه / م³</span>
+        </div>
+        <div class="form-group">
+          <label>الكمية المطلوب حسابها</label>
+          <input type="number" id="quantity" placeholder="1" min="1" step="1" oninput="autoCalc()">
+          <span class="unit">عدد بالتات</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PIECES DIMENSIONS -->
+  <div class="card">
+    <div class="card-header"><span>📐</span> مقاسات قطع البالتة</div>
+    <div class="card-body">
+      <table class="pieces-table">
+        <thead>
+          <tr>
+            <th>نوع القطعة</th>
+            <th>العدد</th>
+            <th>الطول (سم)</th>
+            <th>العرض (سم)</th>
+            <th>السمك (سم)</th>
+            <th>الحجم (م³)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><div class="row-label"><div class="row-dot" style="background:#8B5E3C;"></div>قوائم</div></td>
+            <td><input type="number" id="p1_qty" placeholder="0" min="0" oninput="autoCalc()"></td>
+            <td><input type="number" id="p1_l"   placeholder="0" min="0" step="0.1" oninput="autoCalc()"></td>
+            <td><input type="number" id="p1_w"   placeholder="0" min="0" step="0.1" oninput="autoCalc()"></td>
+            <td><input type="number" id="p1_t"   placeholder="0" min="0" step="0.1" oninput="autoCalc()"></td>
+            <td class="vol-cell" id="v1">—</td>
+          </tr>
+          <tr>
+            <td><div class="row-label"><div class="row-dot" style="background:#C49A6C;"></div>ألواح</div></td>
+            <td><input type="number" id="p2_qty" placeholder="0" min="0" oninput="autoCalc()"></td>
+            <td><input type="number" id="p2_l"   placeholder="0" min="0" step="0.1" oninput="autoCalc()"></td>
+            <td><input type="number" id="p2_w"   placeholder="0" min="0" step="0.1" oninput="autoCalc()"></td>
+            <td><input type="number" id="p2_t"   placeholder="0" min="0" step="0.1" oninput="autoCalc()"></td>
+            <td class="vol-cell" id="v2">—</td>
+          </tr>
+          <tr>
+            <td><div class="row-label"><div class="row-dot" style="background:#5C3D1E;"></div>عوارض الربط</div></td>
+            <td><input type="number" id="p3_qty" placeholder="0" min="0" oninput="autoCalc()"></td>
+            <td><input type="number" id="p3_l"   placeholder="0" min="0" step="0.1" oninput="autoCalc()"></td>
+            <td><input type="number" id="p3_w"   placeholder="0" min="0" step="0.1" oninput="autoCalc()"></td>
+            <td><input type="number" id="p3_t"   placeholder="0" min="0" step="0.1" oninput="autoCalc()"></td>
+            <td class="vol-cell" id="v3">—</td>
+          </tr>
+          <tr class="total-row">
+            <td colspan="5" style="text-align:right; padding-right:12px;">إجمالي حجم الخشب للبالتة الواحدة</td>
+            <td class="vol-cell" id="vTotal" style="font-size:1rem;">—</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="wood-summary" id="woodSummary" style="display:none;">
+        <div class="wood-summary-item">
+          <span>إجمالي حجم الخشب</span>
+          <span id="sumRaw">—</span>
+        </div>
+        <div class="wood-summary-item">
+          <span>تكلفة الخشب / بالتة</span>
+          <span id="sumWoodCost">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXTRA COSTS -->
+  <div class="card">
+    <div class="card-header"><span>💰</span> التكاليف الإضافية (لكل بالتة)</div>
+    <div class="card-body">
+      <table class="costs-table">
+        <thead>
+          <tr><th>البند</th><th>التكلفة (جنيه / بالتة)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="cost-icon">🔩</span><span class="cost-label">مسامير</span></td>
+              <td><input type="number" id="costNails"     placeholder="0" min="0" step="0.01" oninput="autoCalc()"></td></tr>
+          <tr><td><span class="cost-icon">👷</span><span class="cost-label">عمالة</span></td>
+              <td><input type="number" id="costLabor"     placeholder="0" min="0" step="0.01" oninput="autoCalc()"></td></tr>
+          <tr><td><span class="cost-icon">⚡</span><span class="cost-label">كهرباء</span></td>
+              <td><input type="number" id="costElec"      placeholder="0" min="0" step="0.01" oninput="autoCalc()"></td></tr>
+          <tr><td><span class="cost-icon">♨️</span><span class="cost-label">تبخير / معالجة حرارية</span></td>
+              <td><input type="number" id="costSteam"     placeholder="0" min="0" step="0.01" oninput="autoCalc()"></td></tr>
+          <tr><td><span class="cost-icon">🚚</span><span class="cost-label">نقل وشحن</span></td>
+              <td><input type="number" id="costTransport" placeholder="0" min="0" step="0.01" oninput="autoCalc()"></td></tr>
+          <tr><td><span class="cost-icon">➕</span><span class="cost-label">تكاليف أخرى</span></td>
+              <td><input type="number" id="costOther"     placeholder="0" min="0" step="0.01" oninput="autoCalc()"></td></tr>
+        </tbody>
+      </table>
+
+      <!-- EXTRA TOTAL -->
+      <div class="extra-total-row" id="extraTotalRow" style="display:none;">
+        <span>📦 إجمالي التكاليف الإضافية</span>
+        <span id="extraTotalVal">—</span>
+      </div>
+
+      <div class="divider"></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>هامش الربح المطلوب</label>
+          <input type="number" id="profitMargin" placeholder="0" min="0" max="200" step="0.1" oninput="autoCalc()">
+          <span class="unit">% من إجمالي التكلفة</span>
+        </div>
+        <div class="form-group">
+          <label>إجمالي تكلفة البالتة (تلقائي)</label>
+          <input type="number" id="totalDisplay" readonly placeholder="—">
+          <span class="unit">جنيه / بالتة</span>
+        </div>
+      </div>
+
+      <div class="btn-row no-print">
+        <button class="btn-calc" onclick="showResult()">📊 عرض التقرير الكامل</button>
+        <button class="btn-reset" onclick="resetForm()">🔄 تصفير</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="result-card" id="resultSection" style="display:none;">
+    <div class="result-header">📊 تقرير التكلفة — <span id="resultSpecName"></span> | <span id="resultCompanyName"></span></div>
+    <div class="result-body">
+      <div class="breakdown" id="breakdown"></div>
+      <!-- SAVE BANNER -->
+      <div class="no-print" style="background:rgba(255,255,255,0.12);border:2px dashed rgba(255,228,181,0.5);border-radius:10px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:1rem;font-weight:900;color:#FFE4B5;">💾 احفظ هذه المواصفة في الأرشيف</div>
+          <div style="font-size:0.82rem;color:var(--wood-light);margin-top:3px;">عشان تقدر ترجعلها في أي وقت وتبعتها أو تطبعها</div>
+        </div>
+        <button onclick="saveSpec()" style="font-family:Cairo,sans-serif;font-size:1.05rem;font-weight:900;padding:13px 28px;border:none;border-radius:9px;cursor:pointer;background:#FFE4B5;color:#5C3D1E;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,0.2);">💾 حفظ المواصفة</button>
+      </div>
+      <div class="btn-row no-print">
+        <button class="btn-pdf"       onclick="downloadPDF()">📄 تحميل PDF</button>
+        <button class="btn-whatsapp"  onclick="sendWhatsApp()">💬 إرسال واتساب</button>
+        <button class="btn-print"     onclick="window.print()">🖨️ طباعة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAVED SPECS -->
+  <div class="card no-print">
+    <div class="card-header"><span>📁</span> المواصفات المحفوظة</div>
+    <div class="card-body">
+      <div class="saved-list" id="savedList">
+        <div class="empty-state">لا توجد مواصفات محفوظة بعد</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function v(id) { return parseFloat(document.getElementById(id).value) || 0; }
+  function s(id) { return document.getElementById(id).value.trim(); }
+  function fmt(n) { return n.toLocaleString('ar-EG', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' جنيه'; }
+  function fmtM3(n) { return n.toFixed(6) + ' م³'; }
+
+  function pieceVol(qtyId, lId, wId, tId) {
+    return v(qtyId) * v(lId) * v(wId) * v(tId) / 1000000;
+  }
+
+  function autoCalc() {
+    const vol1 = pieceVol('p1_qty','p1_l','p1_w','p1_t');
+    const vol2 = pieceVol('p2_qty','p2_l','p2_w','p2_t');
+    const vol3 = pieceVol('p3_qty','p3_l','p3_w','p3_t');
+    const totalVol = vol1 + vol2 + vol3;
+
+    document.getElementById('v1').textContent     = vol1 > 0 ? fmtM3(vol1) : '—';
+    document.getElementById('v2').textContent     = vol2 > 0 ? fmtM3(vol2) : '—';
+    document.getElementById('v3').textContent     = vol3 > 0 ? fmtM3(vol3) : '—';
+    document.getElementById('vTotal').textContent = totalVol > 0 ? fmtM3(totalVol) : '—';
+
+    const woodPrice = v('woodPrice');
+    const woodCost  = woodPrice * totalVol;
+
+    const showSummary = totalVol > 0 || woodPrice > 0;
+    document.getElementById('woodSummary').style.display = showSummary ? 'flex' : 'none';
+    document.getElementById('sumRaw').textContent      = fmtM3(totalVol);
+    document.getElementById('sumWoodCost').textContent = woodPrice > 0 ? fmt(woodCost) : '—';
+
+    const extra = v('costNails') + v('costLabor') + v('costElec') + v('costSteam') + v('costTransport') + v('costOther');
+
+    // Show extra total row
+    const extraRow = document.getElementById('extraTotalRow');
+    if (extra > 0) {
+      extraRow.style.display = 'flex';
+      document.getElementById('extraTotalVal').textContent = fmt(extra);
+    } else {
+      extraRow.style.display = 'none';
+    }
+
+    const total   = woodCost + extra;
+    const profit  = v('profitMargin');
+    const selling = total * (1 + profit / 100);
+
+    document.getElementById('totalDisplay').value = total > 0 ? total.toFixed(2) : '';
+
+    return { vol1, vol2, vol3, totalVol, woodCost, extra, total, selling, woodPrice, profitMargin: profit };
+  }
+
+  function showResult() {
+    const d = autoCalc();
+    const specName    = s('specName')    || 'غير محدد';
+    const companyName = s('companyName') || 'غير محدد';
+    const qty = Math.max(1, v('quantity') || 1);
+    const profitAmt = d.total * (d.profitMargin / 100);
+
+    document.getElementById('resultSpecName').textContent    = specName;
+    document.getElementById('resultCompanyName').textContent = companyName;
+
+    let html = '';
+
+    // Wood section
+    html += `<div class="breakdown-row highlight"><span>🌲 تكلفة الخشب</span><span class="val">${fmt(d.woodCost)}</span></div>`;
+    if (d.vol1 > 0) html += `<div class="breakdown-row sub"><span>↳ قوائم — ${fmtM3(d.vol1)}</span><span class="val">${fmt(d.woodPrice * d.vol1)}</span></div>`;
+    if (d.vol2 > 0) html += `<div class="breakdown-row sub"><span>↳ ألواح — ${fmtM3(d.vol2)}</span><span class="val">${fmt(d.woodPrice * d.vol2)}</span></div>`;
+    if (d.vol3 > 0) html += `<div class="breakdown-row sub"><span>↳ عوارض الربط — ${fmtM3(d.vol3)}</span><span class="val">${fmt(d.woodPrice * d.vol3)}</span></div>`;
+
+    // Extra costs section
+    const extras = [
+      { id:'costNails',     label:'🔩 مسامير' },
+      { id:'costLabor',     label:'👷 عمالة' },
+      { id:'costElec',      label:'⚡ كهرباء' },
+      { id:'costSteam',     label:'♨️ تبخير' },
+      { id:'costTransport', label:'🚚 نقل' },
+      { id:'costOther',     label:'➕ أخرى' },
+    ];
+    const activeExtras = extras.filter(e => v(e.id) > 0);
+    if (activeExtras.length > 0) {
+      html += `<div class="breakdown-row highlight"><span>📦 التكاليف الإضافية</span><span class="val">${fmt(d.extra)}</span></div>`;
+      activeExtras.forEach(e => {
+        html += `<div class="breakdown-row sub"><span>↳ ${e.label}</span><span class="val">${fmt(v(e.id))}</span></div>`;
+      });
+    }
+
+    html += `<div class="breakdown-row highlight" style="margin-top:4px;"><span>💵 إجمالي تكلفة البالتة الواحدة</span><span class="val">${fmt(d.total)}</span></div>`;
+
+    if (d.profitMargin > 0) {
+      html += `<div class="breakdown-row"><span>📈 هامش ربح (${d.profitMargin}%)</span><span class="val">${fmt(profitAmt)}</span></div>`;
+      html += `<div class="breakdown-row highlight"><span>🏷️ سعر بيع البالتة الواحدة</span><span class="val">${fmt(d.selling)}</span></div>`;
+    }
+
+    if (qty > 1) {
+      const totalAll   = d.total   * qty;
+      const sellingAll = d.selling * qty;
+      html += `<div class="breakdown-row" style="margin-top:6px;"><span>📦 تكلفة ${qty.toLocaleString('ar-EG')} بالتة</span><span class="val">${fmt(totalAll)}</span></div>`;
+      if (d.profitMargin > 0) {
+        html += `<div class="breakdown-row grand"><span>💰 إجمالي سعر البيع (${qty.toLocaleString('ar-EG')} بالتة)</span><span class="val">${fmt(sellingAll)}</span></div>`;
+      } else {
+        html += `<div class="breakdown-row grand"><span>💰 إجمالي تكلفة الطلبية</span><span class="val">${fmt(totalAll)}</span></div>`;
+      }
+    } else {
+      const finalVal = d.profitMargin > 0 ? d.selling : d.total;
+      const finalLbl = d.profitMargin > 0 ? 'سعر البيع النهائي' : 'تكلفة البالتة النهائية';
+      html += `<div class="breakdown-row grand"><span>💰 ${finalLbl}</span><span class="val">${fmt(finalVal)}</span></div>`;
+    }
+
+    document.getElementById('breakdown').innerHTML = html;
+    document.getElementById('resultSection').style.display = 'block';
+    document.getElementById('resultSection').scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+
+  function saveSpec() {
+    const d = autoCalc();
+    const spec = {
+      specName: s('specName') || 'غير محدد', companyName: s('companyName') || 'غير محدد',
+      woodPrice: v('woodPrice'), quantity: v('quantity'),
+      p1_qty:v('p1_qty'), p1_l:v('p1_l'), p1_w:v('p1_w'), p1_t:v('p1_t'),
+      p2_qty:v('p2_qty'), p2_l:v('p2_l'), p2_w:v('p2_w'), p2_t:v('p2_t'),
+      p3_qty:v('p3_qty'), p3_l:v('p3_l'), p3_w:v('p3_w'), p3_t:v('p3_t'),
+      costNails:v('costNails'), costLabor:v('costLabor'), costElec:v('costElec'),
+      costSteam:v('costSteam'), costTransport:v('costTransport'), costOther:v('costOther'),
+      profitMargin:v('profitMargin'), totalCost: d.total, sellingPrice: d.selling,
+      savedAt: new Date().toLocaleString('ar-EG')
+    };
+    const specs = JSON.parse((window.__sbSpecs__ ? JSON.stringify(window.__sbSpecs__) : localStorage.getItem('palletSpecs')) || '[]');
+    specs.unshift(spec);
+    localStorage.setItem('palletSpecs', JSON.stringify(specs.slice(0,20))); sbSaveSpecs(specs.slice(0,20));
+    renderSaved();
+    alert('✅ تم حفظ المواصفة!');
+  }
+
+  // ─── PDF ───────────────────────────────────────────────────────
+  function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    const d = autoCalc();
+    const specName    = s('specName')    || 'غير محدد';
+    const companyName = s('companyName') || 'غير محدد';
+    const qty = Math.max(1, v('quantity') || 1);
+    const profitAmt = d.total * (d.profitMargin / 100);
+    const date = new Date().toLocaleDateString('ar-EG');
+
+    // Colors
+    const brown    = [92, 61, 30];
+    const brownL   = [196, 154, 108];
+    const cream    = [245, 237, 216];
+    const white    = [255, 253, 248];
+    const darkText = [26, 17, 9];
+
+    const W = 210, H = 297;
+    let y = 0;
+
+    // Header background
+    doc.setFillColor(...brown);
+    doc.rect(0, 0, W, 42, 'F');
+
+    // Gold line
+    doc.setFillColor(...brownL);
+    doc.rect(0, 42, W, 1.5, 'F');
+
+    // Company name (use latin chars for PDF compat, Arabic rendered via canvas trick not available in basic jsPDF)
+    doc.setTextColor(255, 228, 181);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Al-Masriya Al-Khaleejiya Wood Industries', W/2, 14, {align:'center'});
+    doc.setFontSize(8);
+    doc.setTextColor(...brownL);
+    doc.text('EGYPTIAN GULF WOOD INDUSTRIES', W/2, 20, {align:'center'});
+
+    doc.setFillColor(...brownL);
+    doc.rect(60, 23, 90, 0.5, 'F');
+
+    doc.setTextColor(245, 237, 216);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Pallet Cost Report', W/2, 31, {align:'center'});
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text('احسب - وفر - انجح', W/2, 37, {align:'center'});
+
+    y = 52;
+
+    // Info bar
+    doc.setFillColor(...cream);
+    doc.roundedRect(10, y, W-20, 18, 2, 2, 'F');
+    doc.setTextColor(...darkText);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Spec / Model:', 15, y+7);
+    doc.setFont('helvetica', 'normal');
+    doc.text(specName, 50, y+7);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Client:', 15, y+13);
+    doc.setFont('helvetica', 'normal');
+    doc.text(companyName, 50, y+13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Date:', 150, y+7);
+    doc.setFont('helvetica', 'normal');
+    doc.text(date, 165, y+7);
+    doc.text('Qty: ' + qty, 165, y+13);
+
+    y += 26;
+
+    // Section helper
+    function sectionTitle(title) {
+      doc.setFillColor(...brown);
+      doc.roundedRect(10, y, W-20, 8, 1, 1, 'F');
+      doc.setTextColor(255,255,255);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(title, 15, y+5.5);
+      y += 12;
+    }
+
+    function row(label, val, sub=false) {
+      doc.setFillColor(sub ? 250 : 255, sub ? 248 : 253, sub ? 240 : 248);
+      doc.rect(10, y, W-20, 7, 'F');
+      doc.setTextColor(...darkText);
+      doc.setFontSize(sub ? 8 : 9);
+      doc.setFont('helvetica', sub ? 'normal' : 'bold');
+      doc.text(label, sub ? 18 : 15, y+5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(val, W-12, y+5, {align:'right'});
+      doc.setDrawColor(234, 217, 184);
+      doc.line(10, y+7, W-10, y+7);
+      y += 7;
+    }
+
+    function totalRow(label, val, highlight=false) {
+      doc.setFillColor(highlight ? ...brownL : ...cream);
+      doc.roundedRect(10, y, W-20, 9, 1, 1, 'F');
+      doc.setTextColor(highlight ? ...brown : ...darkText);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(label, 15, y+6.5);
+      doc.text(val, W-12, y+6.5, {align:'right'});
+      y += 13;
+    }
+
+    // Wood section
+    sectionTitle('Wood Cost');
+    row('Total Volume (m3):', fmtM3(d.totalVol));
+    if (d.vol1 > 0) row('  Qawa'em (Uprights):', fmtM3(d.vol1), true);
+    if (d.vol2 > 0) row('  Alwah (Boards):', fmtM3(d.vol2), true);
+    if (d.vol3 > 0) row('  Awarid Rabt (Crossbeams):', fmtM3(d.vol3), true);
+    row('Wood Price /m3:', d.woodPrice.toFixed(2) + ' EGP');
+    totalRow('Wood Cost / Pallet:', d.woodCost.toFixed(2) + ' EGP');
+
+    // Extra costs
+    sectionTitle('Additional Costs');
+    const extras2 = [
+      {id:'costNails',label:'Nails'},{id:'costLabor',label:'Labor'},
+      {id:'costElec',label:'Electricity'},{id:'costSteam',label:'Steaming'},
+      {id:'costTransport',label:'Transport'},{id:'costOther',label:'Other'},
+    ];
+    extras2.forEach(e => { if(v(e.id)>0) row(e.label+':', v(e.id).toFixed(2)+' EGP'); });
+    totalRow('Total Additional Costs:', d.extra.toFixed(2) + ' EGP');
+
+    // Summary
+    sectionTitle('Summary');
+    totalRow('Total Cost / Pallet:', d.total.toFixed(2) + ' EGP');
+    if (d.profitMargin > 0) {
+      row('Profit Margin (' + d.profitMargin + '%):', profitAmt.toFixed(2) + ' EGP');
+      totalRow('Selling Price / Pallet:', d.selling.toFixed(2) + ' EGP', true);
+    }
+    if (qty > 1) {
+      row('Quantity:', qty + ' pallets');
+      totalRow('Total Order Cost:', (d.total * qty).toFixed(2) + ' EGP', true);
+      if (d.profitMargin > 0)
+        totalRow('Total Selling Price:', (d.selling * qty).toFixed(2) + ' EGP', true);
+    }
+
+    // Footer
+    doc.setFillColor(...brown);
+    doc.rect(0, H-14, W, 14, 'F');
+    doc.setTextColor(...brownL);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Egyptian Gulf Wood Industries  |  Pallet Cost Calculator', W/2, H-8, {align:'center'});
+    doc.text(date, W/2, H-4, {align:'center'});
+
+    doc.save('تسعير-بالتة-' + specName + '.pdf');
+  }
+
+  // ─── WhatsApp ───────────────────────────────────────────────────
+  function sendWhatsApp() {
+    const d = autoCalc();
+    const specName    = s('specName')    || 'غير محدد';
+    const companyName = s('companyName') || 'غير محدد';
+    const qty = Math.max(1, v('quantity') || 1);
+    const date = new Date().toLocaleDateString('ar-EG');
+
+    let msg = '';
+    msg += '🏭 *الشركة المصرية الخليجية للصناعات الخشبية*\n';
+    msg += '━━━━━━━━━━━━━━━━━━\n';
+    msg += '📋 *تقرير تسعير البالتة*\n\n';
+    msg += `📌 المواصفة: *${specName}*\n`;
+    msg += `🏢 العميل: *${companyName}*\n`;
+    msg += `📅 التاريخ: ${date}\n\n`;
+    msg += '━━━━━━━━━━━━━━━━━━\n';
+    msg += '🌲 *تكلفة الخشب*\n';
+    msg += `   الحجم الكلي: ${fmtM3(d.totalVol)}\n`;
+    msg += `   تكلفة الخشب: ${d.woodCost.toFixed(2)} جنيه\n\n`;
+    if (d.extra > 0) {
+      msg += '📦 *التكاليف الإضافية*\n';
+      if (v('costNails')>0)     msg += `   🔩 مسامير: ${v('costNails').toFixed(2)} جنيه\n`;
+      if (v('costLabor')>0)     msg += `   👷 عمالة: ${v('costLabor').toFixed(2)} جنيه\n`;
+      if (v('costElec')>0)      msg += `   ⚡ كهرباء: ${v('costElec').toFixed(2)} جنيه\n`;
+      if (v('costSteam')>0)     msg += `   ♨️ تبخير: ${v('costSteam').toFixed(2)} جنيه\n`;
+      if (v('costTransport')>0) msg += `   🚚 نقل: ${v('costTransport').toFixed(2)} جنيه\n`;
+      if (v('costOther')>0)     msg += `   ➕ أخرى: ${v('costOther').toFixed(2)} جنيه\n`;
+      msg += '\n';
+    }
+    msg += '━━━━━━━━━━━━━━━━━━\n';
+    msg += `💵 *تكلفة البالتة الواحدة: ${d.total.toFixed(2)} جنيه*\n`;
+    if (d.profitMargin > 0) {
+      msg += `📈 هامش ربح (${d.profitMargin}%): ${(d.total * d.profitMargin/100).toFixed(2)} جنيه\n`;
+      msg += `🏷️ *سعر البيع: ${d.selling.toFixed(2)} جنيه*\n`;
+    }
+    if (qty > 1) {
+      msg += `\n📦 الكمية: ${qty} بالتة\n`;
+      msg += `💰 *إجمالي ${d.profitMargin>0?'سعر البيع':'التكلفة'}: ${((d.profitMargin>0?d.selling:d.total)*qty).toFixed(2)} جنيه*\n`;
+    }
+    msg += '━━━━━━━━━━━━━━━━━━';
+
+    const encoded = encodeURIComponent(msg);
+    window.open('https://wa.me/?text=' + encoded, '_blank');
+  }
+
+  function renderSaved() {
+    const specs = JSON.parse((window.__sbSpecs__ ? JSON.stringify(window.__sbSpecs__) : localStorage.getItem('palletSpecs')) || '[]');
+    const el = document.getElementById('savedList');
+    if (!specs.length) { el.innerHTML = '<div class="empty-state">لا توجد مواصفات محفوظة بعد</div>'; return; }
+    el.innerHTML = specs.map((sp, i) => `
+      <div class="saved-item">
+        <div>
+          <div class="saved-item-name">${sp.specName}</div>
+          <div class="saved-item-company">${sp.companyName}
+            <span class="tag">تكلفة: ${sp.totalCost.toFixed(2)} ج</span>
+            ${sp.sellingPrice > sp.totalCost ? `<span class="tag">بيع: ${sp.sellingPrice.toFixed(2)} ج</span>` : ''}
+          </div>
+          <div style="font-size:0.72rem;color:#bbb;margin-top:2px;">${sp.savedAt}</div>
+        </div>
+        <div class="saved-item-actions">
+          <button class="btn-small btn-load" onclick="loadSpec(${i})">تحميل</button>
+          <button class="btn-small btn-del"  onclick="deleteSpec(${i})">حذف</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function loadSpec(i) {
+    const specs = JSON.parse((window.__sbSpecs__ ? JSON.stringify(window.__sbSpecs__) : localStorage.getItem('palletSpecs')) || '[]');
+    const sp = specs[i]; if (!sp) return;
+    const fields = ['woodPrice','quantity',
+      'p1_qty','p1_l','p1_w','p1_t','p2_qty','p2_l','p2_w','p2_t',
+      'p3_qty','p3_l','p3_w','p3_t',
+      'costNails','costLabor','costElec','costSteam','costTransport','costOther','profitMargin'];
+    document.getElementById('specName').value    = sp.specName;
+    document.getElementById('companyName').value = sp.companyName;
+    fields.forEach(f => { if (sp[f] !== undefined) document.getElementById(f).value = sp[f] || ''; });
+    autoCalc();
+    window.scrollTo({ top:0, behavior:'smooth' });
+  }
+
+  function deleteSpec(i) {
+    if (!confirm('هل أنت متأكد من الحذف؟')) return;
+    const specs = JSON.parse((window.__sbSpecs__ ? JSON.stringify(window.__sbSpecs__) : localStorage.getItem('palletSpecs')) || '[]');
+    specs.splice(i, 1);
+    localStorage.setItem('palletSpecs', JSON.stringify(specs)); sbSaveSpecs(specs);
+    renderSaved();
+  }
+
+  function resetForm() {
+    const ids = ['woodPrice','quantity',
+      'p1_qty','p1_l','p1_w','p1_t','p2_qty','p2_l','p2_w','p2_t',
+      'p3_qty','p3_l','p3_w','p3_t',
+      'costNails','costLabor','costElec','costSteam','costTransport','costOther','profitMargin'];
+    ids.forEach(id => document.getElementById(id).value = '');
+    document.getElementById('specName').value = '';
+    document.getElementById('companyName').value = '';
+    document.getElementById('resultSection').style.display = 'none';
+    document.getElementById('totalDisplay').value = '';
+    document.getElementById('extraTotalRow').style.display = 'none';
+    document.getElementById('woodSummary').style.display = 'none';
+    ['v1','v2','v3','vTotal'].forEach(id => document.getElementById(id).textContent = '—');
+  }
+
+  // Load spec from archive if requested
+  (function() {
+    const idx = localStorage.getItem('loadSpecIndex');
+    if (idx !== null) {
+      localStorage.removeItem('loadSpecIndex');
+      const specs = JSON.parse((window.__sbSpecs__ ? JSON.stringify(window.__sbSpecs__) : localStorage.getItem('palletSpecs')) || '[]');
+      const sp = specs[parseInt(idx)];
+      if (sp) {
+        const fields = ['woodPrice','quantity',
+          'p1_qty','p1_l','p1_w','p1_t','p2_qty','p2_l','p2_w','p2_t',
+          'p3_qty','p3_l','p3_w','p3_t',
+          'costNails','costLabor','costElec','costSteam','costTransport','costOther','profitMargin'];
+        document.getElementById('specName').value    = sp.specName || '';
+        document.getElementById('companyName').value = sp.companyName || '';
+        fields.forEach(f => { if (sp[f] !== undefined) document.getElementById(f).value = sp[f] || ''; });
+        autoCalc();
+        setTimeout(() => window.scrollTo({top:0,behavior:'smooth'}), 100);
+      }
+    }
+  })();
+
+  renderSaved();
+</script>
+
+<script>
+// ═══ SUPABASE + AUTH ═══
+(function(){
+  var SURL = 'https://chkiyrqlloufzahdktzs.supabase.co';
+  var SKEY = 'sb_publishable_6ZxUW8NESoxyrDQe_KE5mA_XX-aZFZQ';
+  var sb = supabase.createClient(SURL, SKEY);
+  var sbUser = null;
+  var APP_TABLE = 'pallet_data';
+
+  function showLogin(){
+    document.getElementById('login-page').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+  function showApp(){
+    document.getElementById('login-page').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  // ── Save specs to Supabase ──
+  window.sbSaveSpecs = async function(specs){
+    if(!sbUser) return;
+    try {
+      await sb.from(APP_TABLE).upsert(
+        { user_id: sbUser, data: { specs: specs }, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      );
+    } catch(e){ console.log('sbSave error:', e); }
+  };
+
+  // ── Load specs from Supabase ──
+  async function sbLoadSpecs(){
+    if(!sbUser) return;
+    try {
+      var timeout = new Promise(function(_,rej){ setTimeout(function(){rej('timeout');},6000); });
+      var query = sb.from(APP_TABLE).select('data').eq('user_id', sbUser).maybeSingle();
+      var res = await Promise.race([query, timeout]);
+      if(res && res.data && res.data.data && res.data.data.specs){
+        window.__sbSpecs__ = res.data.data.specs;
+        // Also sync to localStorage
+        localStorage.setItem('palletSpecs', JSON.stringify(res.data.data.specs));
+      }
+    } catch(e){ console.log('sbLoad skipped:', e); }
+    renderSaved();
+  }
+
+  // ── Login ──
+  window.doLogin = async function(){
+    var user = document.getElementById('loginUser').value.trim();
+    var pass = document.getElementById('loginPass').value;
+    var err  = document.getElementById('loginErr');
+    var btn  = document.getElementById('loginBtn');
+    if(!user || !pass){ err.style.display='block'; return; }
+    btn.textContent = '...'; btn.disabled = true;
+    try {
+      var res = await sb.rpc('check_admin', { p_username: user, p_password: pass });
+      btn.textContent = 'دخول ←'; btn.disabled = false;
+      if(res.error || !res.data){
+        err.style.display = 'block';
+        document.getElementById('loginPass').value = '';
+        return;
+      }
+      sbUser = 'pallet_' + user;
+      sessionStorage.setItem('sb_user_pallet', sbUser);
+      err.style.display = 'none';
+      showApp();
+      await sbLoadSpecs();
+    } catch(e){
+      btn.textContent = 'دخول ←'; btn.disabled = false;
+      err.style.display = 'block';
+    }
+  };
+
+  // ── Logout ──
+  window.doLogout = function(){
+    sessionStorage.removeItem('sb_user_pallet');
+    sbUser = null;
+    window.__sbSpecs__ = null;
+    showLogin();
+  };
+
+  // ── Check session ──
+  var sess = sessionStorage.getItem('sb_user_pallet');
+  if(sess){
+    sbUser = sess;
+    showApp();
+    sbLoadSpecs();
+  } else {
+    showLogin();
+  }
+})();
+</script>
+</body>
+</html>
