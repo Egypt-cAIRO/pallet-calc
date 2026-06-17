@@ -134,46 +134,8 @@
     .breakdown-row.grand { background: #ddd; }
   }
 </style>
-
-<style>
-#login-page { display:none; position:fixed; inset:0; z-index:9999; background:#1a1a2e; align-items:center; justify-content:center; }
-body.not-logged-in > *:not(#login-page) { display:none !important; }
-</style>
 </head>
-<body class="not-logged-in">
-
-<div id="login-page">
-  <div style="background:#16213e;border:1px solid #8B6914;border-radius:16px;padding:32px 28px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.5)">
-    <div style="text-align:center;margin-bottom:28px">
-      <div style="font-size:2.5rem;margin-bottom:8px">🪵</div>
-      <h1 style="color:#c9a84c;font-size:1.15rem;font-weight:900;margin-bottom:4px;font-family:Cairo,sans-serif">حاسبة تكلفة البالتة</h1>
-      <p style="color:#64748B;font-size:.75rem;font-family:Cairo,sans-serif">سجّل دخولك للمتابعة</p>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:14px">
-      <div>
-        <label style="font-size:.72rem;color:#94A3B8;font-weight:600;display:block;margin-bottom:5px;font-family:Cairo,sans-serif">👤 اسم المستخدم</label>
-        <input id="loginUser" type="text" placeholder="username" dir="ltr"
-          style="width:100%;background:#0f1117;border:1px solid #2a2d3e;border-radius:8px;padding:10px 12px;color:#fff;font-family:Cairo,sans-serif;font-size:.9rem;outline:none;box-sizing:border-box"
-          onfocus="this.style.borderColor='#c9a84c'" onblur="this.style.borderColor='#2a2d3e'"
-          onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
-      </div>
-      <div>
-        <label style="font-size:.72rem;color:#94A3B8;font-weight:600;display:block;margin-bottom:5px;font-family:Cairo,sans-serif">🔒 كلمة المرور</label>
-        <input id="loginPass" type="password" placeholder="password" dir="ltr"
-          style="width:100%;background:#0f1117;border:1px solid #2a2d3e;border-radius:8px;padding:10px 12px;color:#fff;font-family:Cairo,sans-serif;font-size:.9rem;outline:none;box-sizing:border-box"
-          onfocus="this.style.borderColor='#c9a84c'" onblur="this.style.borderColor='#2a2d3e'"
-          onkeydown="if(event.key==='Enter')doLogin()">
-      </div>
-      <div id="loginErr" style="color:#F87171;font-size:.75rem;text-align:center;display:none;font-family:Cairo,sans-serif">❌ اسم المستخدم أو كلمة المرور غلط</div>
-      <button onclick="doLogin()" id="loginBtn"
-        style="background:linear-gradient(135deg,#c9a84c,#e0c068);border:none;border-radius:8px;padding:12px;color:#1a1a2e;font-family:Cairo,sans-serif;font-size:.95rem;font-weight:900;cursor:pointer;margin-top:4px">
-        دخول ←
-      </button>
-    </div>
-    <p style="text-align:center;color:#555;font-size:.65rem;margin-top:20px;font-family:Cairo,sans-serif">نظام خاص — غير مرخص للعموم</p>
-  </div>
-</div>
-
+<body>
 
 <header>
   <div class="header-inner">
@@ -794,79 +756,52 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
   var SURL = 'https://chkiyrqlloufzahdktzs.supabase.co';
   var SKEY = 'sb_publishable_6ZxUW8NESoxyrDQe_KE5mA_XX-aZFZQ';
   var sb   = supabase.createClient(SURL, SKEY);
-  var sbUser = null;
+  var USER_ID = 'pallet_admin';
 
-  function showLogin(){
-    document.body.classList.add('not-logged-in');
-    document.getElementById('login-page').style.display = 'flex';
-  }
-
-  function showApp(){
-    document.getElementById('login-page').style.display = 'none';
-    document.body.classList.remove('not-logged-in');
-  }
-
+  // Save to Supabase
   window.sbSaveSpecs = async function(specs){
-    if(!sbUser) return;
     try {
       await sb.from('pallet_data').upsert(
-        {user_id: sbUser, data: {specs: specs}, updated_at: new Date().toISOString()},
+        {user_id: USER_ID, data: {specs: specs}, updated_at: new Date().toISOString()},
         {onConflict: 'user_id'}
       );
     } catch(e){ console.log('save error:', e); }
   };
 
-  async function sbLoadAndShow(){
+  // Load from Supabase on page load
+  async function sbLoad(){
     try {
-      var timeout = new Promise(function(_,rej){ setTimeout(function(){rej('timeout');},6000); });
-      var query = sb.from('pallet_data').select('data').eq('user_id', sbUser).maybeSingle();
+      var timeout = new Promise(function(_,rej){ setTimeout(function(){rej('t');},5000); });
+      var query = sb.from('pallet_data').select('data').eq('user_id', USER_ID).maybeSingle();
       var res = await Promise.race([query, timeout]);
       if(res && res.data && res.data.data && res.data.data.specs){
         localStorage.setItem('palletSpecs', JSON.stringify(res.data.data.specs));
+        renderSaved();
       }
     } catch(e){ console.log('load skipped:', e); }
-    showApp();
-    renderSaved();
   }
 
-  window.doLogin = async function(){
-    var user = document.getElementById('loginUser').value.trim();
-    var pass = document.getElementById('loginPass').value;
-    var err  = document.getElementById('loginErr');
-    var btn  = document.getElementById('loginBtn');
-    if(!user||!pass){ err.style.display='block'; return; }
-    btn.textContent='...'; btn.disabled=true;
-    try {
-      var res = await sb.rpc('check_admin',{p_username:user, p_password:pass});
-      btn.textContent='دخول ←'; btn.disabled=false;
-      if(res.error||!res.data){ err.style.display='block'; document.getElementById('loginPass').value=''; return; }
-      sbUser = 'pallet_'+user;
-      sessionStorage.setItem('sb_user_pallet', sbUser);
-      err.style.display='none';
-      await sbLoadAndShow();
-    } catch(e){ btn.textContent='دخول ←'; btn.disabled=false; err.style.display='block'; }
-  };
-
-  window.doLogout = function(){
-    sessionStorage.removeItem('sb_user_pallet');
-    sbUser=null; showLogin();
-  };
+  sbLoad();
 
   // Patch saveSpec to also save to Supabase
-  var _origSaveSpec = window.saveSpec;
-  if(typeof saveSpec !== 'undefined'){
-    var origSave = saveSpec;
-    window.saveSpec = function(){
-      origSave();
+  var _orig = window.saveSpec;
+  window.saveSpec = function(){
+    _orig();
+    setTimeout(function(){
       var specs = JSON.parse(localStorage.getItem('palletSpecs')||'[]');
-      window.sbSaveSpecs(specs);
-    };
-  }
+      sbSaveSpecs(specs);
+    }, 100);
+  };
 
-  // Check session
-  var sess = sessionStorage.getItem('sb_user_pallet');
-  if(sess){ sbUser=sess; sbLoadAndShow(); }
-  else { showLogin(); }
+  // Patch deleteSpec to also sync
+  var _origDel = window.deleteSpec;
+  window.deleteSpec = function(i){
+    _origDel(i);
+    setTimeout(function(){
+      var specs = JSON.parse(localStorage.getItem('palletSpecs')||'[]');
+      sbSaveSpecs(specs);
+    }, 100);
+  };
 })();
 </script>
 
