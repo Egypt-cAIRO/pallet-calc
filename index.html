@@ -134,8 +134,46 @@
     .breakdown-row.grand { background: #ddd; }
   }
 </style>
+
+<style>
+#login-page { display:none; position:fixed; inset:0; z-index:9999; background:#1a1a2e; align-items:center; justify-content:center; }
+body.not-logged-in > *:not(#login-page) { display:none !important; }
+</style>
 </head>
-<body>
+<body class="not-logged-in">
+
+<div id="login-page">
+  <div style="background:#16213e;border:1px solid #8B6914;border-radius:16px;padding:32px 28px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-size:2.5rem;margin-bottom:8px">&#x1FA75;</div>
+      <h1 style="color:#c9a84c;font-size:1.15rem;font-weight:900;margin-bottom:4px;font-family:Cairo,sans-serif">&#x62D;&#x627;&#x633;&#x628;&#x629; &#x62A;&#x643;&#x644;&#x641;&#x629; &#x627;&#x644;&#x628;&#x627;&#x644;&#x62A;&#x629;</h1>
+      <p style="color:#64748B;font-size:.75rem;font-family:Cairo,sans-serif">&#x633;&#x62C;&#x651;&#x644; &#x62F;&#x62E;&#x648;&#x644;&#x643; &#x644;&#x644;&#x645;&#x62A;&#x627;&#x628;&#x639;&#x629;</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:.72rem;color:#94A3B8;font-weight:600;display:block;margin-bottom:5px;font-family:Cairo,sans-serif">&#x1F464; &#x627;&#x633;&#x645; &#x627;&#x644;&#x645;&#x633;&#x62A;&#x62E;&#x62F;&#x645;</label>
+        <input id="loginUser" type="text" placeholder="username" dir="ltr"
+          style="width:100%;background:#0f1117;border:1px solid #2a2d3e;border-radius:8px;padding:10px 12px;color:#fff;font-family:Cairo,sans-serif;font-size:.9rem;outline:none;box-sizing:border-box"
+          onfocus="this.style.borderColor='#c9a84c'" onblur="this.style.borderColor='#2a2d3e'"
+          onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+      </div>
+      <div>
+        <label style="font-size:.72rem;color:#94A3B8;font-weight:600;display:block;margin-bottom:5px;font-family:Cairo,sans-serif">&#x1F512; &#x643;&#x644;&#x645;&#x629; &#x627;&#x644;&#x645;&#x631;&#x648;&#x631;</label>
+        <input id="loginPass" type="password" placeholder="password" dir="ltr"
+          style="width:100%;background:#0f1117;border:1px solid #2a2d3e;border-radius:8px;padding:10px 12px;color:#fff;font-family:Cairo,sans-serif;font-size:.9rem;outline:none;box-sizing:border-box"
+          onfocus="this.style.borderColor='#c9a84c'" onblur="this.style.borderColor='#2a2d3e'"
+          onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div id="loginErr" style="color:#F87171;font-size:.75rem;text-align:center;display:none;font-family:Cairo,sans-serif">&#x274C; &#x627;&#x633;&#x645; &#x627;&#x644;&#x645;&#x633;&#x62A;&#x62E;&#x62F;&#x645; &#x623;&#x648; &#x643;&#x644;&#x645;&#x629; &#x627;&#x644;&#x645;&#x631;&#x648;&#x631; &#x63A;&#x644;&#x637;</div>
+      <button onclick="doLogin()" id="loginBtn"
+        style="background:linear-gradient(135deg,#c9a84c,#e0c068);border:none;border-radius:8px;padding:12px;color:#1a1a2e;font-family:Cairo,sans-serif;font-size:.95rem;font-weight:900;cursor:pointer;margin-top:4px">
+        &#x62F;&#x62E;&#x648;&#x644; &#x2190;
+      </button>
+    </div>
+    <p style="text-align:center;color:#555;font-size:.65rem;margin-top:20px;font-family:Cairo,sans-serif">&#x646;&#x638;&#x627;&#x645; &#x62E;&#x627;&#x635; &#x2014; &#x63A;&#x64A;&#x631; &#x645;&#x631;&#x62E;&#x635; &#x644;&#x644;&#x639;&#x645;&#x648;&#x645;</p>
+  </div>
+</div>
+
 
 <header>
   <div class="header-inner">
@@ -756,52 +794,91 @@
   var SURL = 'https://chkiyrqlloufzahdktzs.supabase.co';
   var SKEY = 'sb_publishable_6ZxUW8NESoxyrDQe_KE5mA_XX-aZFZQ';
   var sb   = supabase.createClient(SURL, SKEY);
-  var USER_ID = 'pallet_admin';
+  var sbUser = null;
 
-  // Save to Supabase
+  function showLogin(){
+    document.getElementById('login-page').style.display = 'flex';
+    document.body.classList.add('not-logged-in');
+  }
+
+  function showApp(){
+    document.getElementById('login-page').style.display = 'none';
+    document.body.classList.remove('not-logged-in');
+  }
+
   window.sbSaveSpecs = async function(specs){
+    if(!sbUser) return;
     try {
       await sb.from('pallet_data').upsert(
-        {user_id: USER_ID, data: {specs: specs}, updated_at: new Date().toISOString()},
+        {user_id: sbUser, data: {specs: specs}, updated_at: new Date().toISOString()},
         {onConflict: 'user_id'}
       );
     } catch(e){ console.log('save error:', e); }
   };
 
-  // Load from Supabase on page load
-  async function sbLoad(){
+  async function sbLoadAndShow(){
     try {
       var timeout = new Promise(function(_,rej){ setTimeout(function(){rej('t');},5000); });
-      var query = sb.from('pallet_data').select('data').eq('user_id', USER_ID).maybeSingle();
+      var query = sb.from('pallet_data').select('data').eq('user_id', sbUser).maybeSingle();
       var res = await Promise.race([query, timeout]);
       if(res && res.data && res.data.data && res.data.data.specs){
         localStorage.setItem('palletSpecs', JSON.stringify(res.data.data.specs));
-        renderSaved();
       }
     } catch(e){ console.log('load skipped:', e); }
+    showApp();
+    renderSaved();
   }
 
-  sbLoad();
+  window.doLogin = async function(){
+    var user = document.getElementById('loginUser').value.trim();
+    var pass = document.getElementById('loginPass').value;
+    var err  = document.getElementById('loginErr');
+    var btn  = document.getElementById('loginBtn');
+    if(!user||!pass){ err.style.display='block'; return; }
+    btn.textContent='...'; btn.disabled=true;
+    try {
+      var res = await sb.rpc('check_admin',{p_username:user, p_password:pass});
+      btn.textContent='دخول ←'; btn.disabled=false;
+      if(res.error||!res.data){ err.style.display='block'; document.getElementById('loginPass').value=''; return; }
+      sbUser = 'pallet_'+user;
+      sessionStorage.setItem('sb_user_pallet', sbUser);
+      err.style.display='none';
+      await sbLoadAndShow();
+    } catch(e){ btn.textContent='دخول ←'; btn.disabled=false; err.style.display='block'; }
+  };
 
-  // Patch saveSpec to also save to Supabase
+  window.doLogout = function(){
+    sessionStorage.removeItem('sb_user_pallet');
+    sbUser=null;
+    localStorage.removeItem('palletSpecs');
+    showLogin();
+    renderSaved();
+  };
+
+  // Patch saveSpec
   var _orig = window.saveSpec;
   window.saveSpec = function(){
     _orig();
     setTimeout(function(){
       var specs = JSON.parse(localStorage.getItem('palletSpecs')||'[]');
-      sbSaveSpecs(specs);
+      window.sbSaveSpecs(specs);
     }, 100);
   };
 
-  // Patch deleteSpec to also sync
+  // Patch deleteSpec
   var _origDel = window.deleteSpec;
   window.deleteSpec = function(i){
     _origDel(i);
     setTimeout(function(){
       var specs = JSON.parse(localStorage.getItem('palletSpecs')||'[]');
-      sbSaveSpecs(specs);
+      window.sbSaveSpecs(specs);
     }, 100);
   };
+
+  // Check session
+  var sess = sessionStorage.getItem('sb_user_pallet');
+  if(sess){ sbUser=sess; sbLoadAndShow(); }
+  else { showLogin(); }
 })();
 </script>
 
