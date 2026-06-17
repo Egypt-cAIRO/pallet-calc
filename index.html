@@ -168,6 +168,7 @@
   </div>
 </div>
 
+<div id="main-app" style="display:none">
 <header>
   <div class="header-inner">
     <div class="header-top-bar">
@@ -781,6 +782,7 @@
   })();
 
   renderSaved();
+</div><!-- /main-app -->
 </script>
 
 <script>
@@ -794,10 +796,12 @@
 
   function showLogin(){
     document.getElementById('login-page').style.display = 'flex';
+    document.getElementById('main-app').style.display = 'none';
     document.body.style.overflow = 'hidden';
   }
   function showApp(){
     document.getElementById('login-page').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
     document.body.style.overflow = '';
   }
 
