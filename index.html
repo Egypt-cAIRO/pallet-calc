@@ -554,7 +554,7 @@
       y += 12;
     }
 
-    function row(label, val, sub=false) {
+    function row(label, val, sub) {
       doc.setFillColor(sub ? 250 : 255, sub ? 248 : 253, sub ? 240 : 248);
       doc.rect(10, y, W-20, 7, 'F');
       doc.setTextColor(darkText[0],darkText[1],darkText[2]);
@@ -568,10 +568,10 @@
       y += 7;
     }
 
-    function totalRow(label, val, highlight=false) {
-      doc.setFillColor(...(highlight ? brownL : cream));
+    function totalRow(label, val, highlight) {
+      var _fc=highlight?brownL:cream; doc.setFillColor(_fc[0],_fc[1],_fc[2]);
       doc.roundedRect(10, y, W-20, 9, 1, 1, 'F');
-      doc.setTextColor(...(highlight ? brown : darkText));
+      var _tc=highlight?brown:darkText; doc.setTextColor(_tc[0],_tc[1],_tc[2]);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text(label, 15, y+6.5);
@@ -582,7 +582,7 @@
     // Wood section
     sectionTitle('Wood Cost');
     row('Total Volume (m3):', fmtM3(d.totalVol));
-    if (d.vol1 > 0) row('  Qawa'em (Uprights):', fmtM3(d.vol1), true);
+    if (d.vol1 > 0) row("  Qawa'em (Uprights):", fmtM3(d.vol1), true);
     if (d.vol2 > 0) row('  Alwah (Boards):', fmtM3(d.vol2), true);
     if (d.vol3 > 0) row('  Awarid Rabt (Crossbeams):', fmtM3(d.vol3), true);
     row('Wood Price /m3:', d.woodPrice.toFixed(2) + ' EGP');
