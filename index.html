@@ -493,11 +493,11 @@
     let y = 0;
 
     // Header background
-    doc.setFillColor(...brown);
+    doc.setFillColor(brown[0],brown[1],brown[2]);
     doc.rect(0, 0, W, 42, 'F');
 
     // Gold line
-    doc.setFillColor(...brownL);
+    doc.setFillColor(brownL[0],brownL[1],brownL[2]);
     doc.rect(0, 42, W, 1.5, 'F');
 
     // Company name (use latin chars for PDF compat, Arabic rendered via canvas trick not available in basic jsPDF)
@@ -506,10 +506,10 @@
     doc.setFont('helvetica', 'bold');
     doc.text('Al-Masriya Al-Khaleejiya Wood Industries', W/2, 14, {align:'center'});
     doc.setFontSize(8);
-    doc.setTextColor(...brownL);
+    doc.setTextColor(brownL[0],brownL[1],brownL[2]);
     doc.text('EGYPTIAN GULF WOOD INDUSTRIES', W/2, 20, {align:'center'});
 
-    doc.setFillColor(...brownL);
+    doc.setFillColor(brownL[0],brownL[1],brownL[2]);
     doc.rect(60, 23, 90, 0.5, 'F');
 
     doc.setTextColor(245, 237, 216);
@@ -523,9 +523,9 @@
     y = 52;
 
     // Info bar
-    doc.setFillColor(...cream);
+    doc.setFillColor(cream[0],cream[1],cream[2]);
     doc.roundedRect(10, y, W-20, 18, 2, 2, 'F');
-    doc.setTextColor(...darkText);
+    doc.setTextColor(darkText[0],darkText[1],darkText[2]);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.text('Spec / Model:', 15, y+7);
@@ -545,7 +545,7 @@
 
     // Section helper
     function sectionTitle(title) {
-      doc.setFillColor(...brown);
+      doc.setFillColor(brown[0],brown[1],brown[2]);
       doc.roundedRect(10, y, W-20, 8, 1, 1, 'F');
       doc.setTextColor(255,255,255);
       doc.setFontSize(9);
@@ -557,7 +557,7 @@
     function row(label, val, sub=false) {
       doc.setFillColor(sub ? 250 : 255, sub ? 248 : 253, sub ? 240 : 248);
       doc.rect(10, y, W-20, 7, 'F');
-      doc.setTextColor(...darkText);
+      doc.setTextColor(darkText[0],darkText[1],darkText[2]);
       doc.setFontSize(sub ? 8 : 9);
       doc.setFont('helvetica', sub ? 'normal' : 'bold');
       doc.text(label, sub ? 18 : 15, y+5);
@@ -569,9 +569,9 @@
     }
 
     function totalRow(label, val, highlight=false) {
-      doc.setFillColor(highlight ? ...brownL : ...cream);
+      doc.setFillColor(...(highlight ? brownL : cream));
       doc.roundedRect(10, y, W-20, 9, 1, 1, 'F');
-      doc.setTextColor(highlight ? ...brown : ...darkText);
+      doc.setTextColor(...(highlight ? brown : darkText));
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text(label, 15, y+6.5);
@@ -613,9 +613,9 @@
     }
 
     // Footer
-    doc.setFillColor(...brown);
+    doc.setFillColor(brown[0],brown[1],brown[2]);
     doc.rect(0, H-14, W, 14, 'F');
-    doc.setTextColor(...brownL);
+    doc.setTextColor(brownL[0],brownL[1],brownL[2]);
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'normal');
     doc.text('Egyptian Gulf Wood Industries  |  Pallet Cost Calculator', W/2, H-8, {align:'center'});
