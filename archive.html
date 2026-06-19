@@ -118,7 +118,8 @@
 </style>
 
 <style>
-#auth-loading { position:fixed; inset:0; z-index:9999; background:#1a1a2e; display:flex; align-items:center; justify-content:center; color:#c9a84c; font-family:Cairo,sans-serif; font-size:18px; flex-direction:column; gap:12px; }
+#auth-loading { position:fixed; inset:0; z-index:9999; background:#1a1a2e; display:none; align-items:center; justify-content:center; color:#c9a84c; font-family:Cairo,sans-serif; font-size:18px; flex-direction:column; gap:12px; }
+body.checking-auth #auth-loading { display:flex; }
 body.checking-auth > *:not(#auth-loading) { display:none !important; }
 </style>
 </head>
