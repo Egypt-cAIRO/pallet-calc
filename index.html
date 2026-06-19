@@ -6,6 +6,7 @@
 <title>حاسبة تكلفة البالتة الخشبية</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -508,8 +509,8 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
 
   function showResult() {
     const d = autoCalc();
-    const specName    = s('specName')    || 'غير محدد';
-    const companyName = s('companyName') || 'غير محدد';
+    const specName    = s('specName')    || 'N/A';
+    const companyName = s('companyName') || 'N/A';
     const qty = Math.max(1, v('quantity') || 1);
     const profitAmt = d.total * (d.profitMargin / 100);
 
@@ -604,16 +605,44 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
   }
 
   // ─── PDF ───────────────────────────────────────────────────────
-  function downloadPDF() {
+  async function addArabicText(doc, text, xMm, yMm, wMm, hMm){
+      if(!text || text === 'N/A') return;
+      // Create a temporary hidden div with the Arabic text, styled, then rasterize it
+      var div = document.createElement('div');
+      div.style.position = 'fixed';
+      div.style.left = '-9999px';
+      div.style.top = '0';
+      div.style.direction = 'rtl';
+      div.style.fontFamily = 'Cairo, Arial, sans-serif';
+      div.style.fontSize = '28px';
+      div.style.color = '#1a1109';
+      div.style.background = '#ffffff';
+      div.style.padding = '4px 8px';
+      div.style.whiteSpace = 'nowrap';
+      div.textContent = text;
+      document.body.appendChild(div);
+      try {
+        var canvas = await html2canvas(div, { scale: 3, backgroundColor: null });
+        var imgData = canvas.toDataURL('image/png');
+        var ratio = canvas.width / canvas.height;
+        var hUse = hMm;
+        var wUse = hUse * ratio;
+        if(wUse > wMm){ wUse = wMm; hUse = wUse / ratio; }
+        doc.addImage(imgData, 'PNG', xMm, yMm, wUse, hUse);
+      } catch(e){ console.log('Arabic render failed:', e); }
+      document.body.removeChild(div);
+    }
+
+    async function downloadPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     const d = autoCalc();
-    const specName    = s('specName')    || 'غير محدد';
-    const companyName = s('companyName') || 'غير محدد';
+    const specName    = s('specName')    || 'N/A';
+    const companyName = s('companyName') || 'N/A';
     const qty = Math.max(1, v('quantity') || 1);
     const profitAmt = d.total * (d.profitMargin / 100);
-    const date = new Date().toLocaleDateString('ar-EG');
+    const date = new Date().toLocaleDateString('en-GB');
 
     // Colors
     const brown    = [92, 61, 30];
@@ -651,7 +680,7 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
     doc.text('Pallet Cost Report', W/2, 31, {align:'center'});
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.text('احسب - وفر - انجح', W/2, 37, {align:'center'});
+    doc.text('Calculate - Save - Succeed', W/2, 37, {align:'center'});
 
     y = 52;
 
@@ -662,17 +691,16 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.text('Spec / Model:', 15, y+7);
-    doc.setFont('helvetica', 'normal');
-    doc.text(specName, 50, y+7);
-    doc.setFont('helvetica', 'bold');
     doc.text('Client:', 15, y+13);
-    doc.setFont('helvetica', 'normal');
-    doc.text(companyName, 50, y+13);
     doc.setFont('helvetica', 'bold');
     doc.text('Date:', 150, y+7);
     doc.setFont('helvetica', 'normal');
     doc.text(date, 165, y+7);
     doc.text('Qty: ' + qty, 165, y+13);
+
+    // Render Arabic-safe spec/client names as image (handles Arabic text correctly)
+    await addArabicText(doc, specName, 50, y+3.5, 95, 6);
+    await addArabicText(doc, companyName, 50, y+9.5, 95, 6);
 
     y += 26;
 
@@ -771,10 +799,10 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
   // ─── WhatsApp ───────────────────────────────────────────────────
   function sendWhatsApp() {
     const d = autoCalc();
-    const specName    = s('specName')    || 'غير محدد';
-    const companyName = s('companyName') || 'غير محدد';
+    const specName    = s('specName')    || 'N/A';
+    const companyName = s('companyName') || 'N/A';
     const qty = Math.max(1, v('quantity') || 1);
-    const date = new Date().toLocaleDateString('ar-EG');
+    const date = new Date().toLocaleDateString('en-GB');
 
     let msg = '';
     msg += '🏭 *الشركة المصرية الخليجية للصناعات الخشبية*\n';
@@ -822,7 +850,7 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
   }
 
   // ─── QUOTE PDF ──────────────────────────────────────────────
-  function downloadQuotePDF() {
+  async function downloadQuotePDF() {
     const { jsPDF } = window.jspdf;
     const d         = autoCalc();
     const specName  = s('specName')    || 'N/A';
@@ -883,12 +911,10 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
 
     doc.setTextColor(92,61,30); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
     doc.text('CLIENT', 15, y+7);
-    doc.setFont('helvetica','normal'); doc.setTextColor(26,17,9); doc.setFontSize(9);
-    doc.text(client, 15, y+14);
+    await addArabicText(doc, client, 15, y+9, 80, 5);
     doc.setFontSize(7.5); doc.setTextColor(92,61,30); doc.setFont('helvetica','bold');
     doc.text('SPEC / MODEL', 15, y+21);
-    doc.setFont('helvetica','normal'); doc.setTextColor(26,17,9); doc.setFontSize(8.5);
-    doc.text(specName, 15, y+27);
+    await addArabicText(doc, specName, 15, y+23, 80, 5);
 
     // Right box: Quote details
     doc.setFillColor(245,240,230);
