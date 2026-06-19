@@ -123,6 +123,23 @@
   .empty-state { text-align: center; color: var(--muted); font-size: 0.88rem; padding: 18px; }
   .tag { display: inline-block; background: var(--sawdust-dark); color: var(--muted); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; margin-right: 4px; }
 
+  /* VAT TOGGLE */
+  .vat-toggle { display:flex; justify-content:space-between; align-items:center;
+    background: linear-gradient(135deg, #f5f0e8, #ede3d0);
+    border: 1.5px solid var(--wood-light); border-radius: 10px;
+    padding: 14px 18px; margin-top: 14px; gap: 12px; flex-wrap: wrap; }
+  .vat-toggle-right { display:flex; align-items:center; gap: 12px; }
+  .vat-icon { font-size: 1.5rem; }
+  .vat-title { font-weight: 800; font-size: 0.97rem; color: var(--ink); }
+  .vat-sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  /* Toggle switch */
+  .switch { position:relative; display:inline-block; width:52px; height:28px; flex-shrink:0; }
+  .switch input { opacity:0; width:0; height:0; }
+  .slider { position:absolute; cursor:pointer; inset:0; background:#ccc; border-radius:28px; transition:.3s; }
+  .slider:before { position:absolute; content:""; height:22px; width:22px; right:3px; bottom:3px; background:white; border-radius:50%; transition:.3s; }
+  input:checked + .slider { background: var(--wood); }
+  input:checked + .slider:before { transform: translateX(-24px); }
+
   @media (max-width: 600px) {
     .form-grid, .form-grid.three { grid-template-columns: 1fr; }
     .pieces-table th, .pieces-table td { font-size: 0.76rem; padding: 5px 3px; }
@@ -132,6 +149,7 @@
     .no-print { display: none !important; }
     .result-card { color: black; background: #f5f5f5; }
     .breakdown-row.grand { background: #ddd; }
+    .row4-hide { display: none !important; }
   }
 </style>
 
@@ -187,6 +205,7 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
     </div>
     <h1>🪵 حاسبة تكلفة البالتة الخشبية</h1>
     <p>احسب تكلفة الإنتاج بدقة — من مقاسات القطع حتى سعر البيع</p>
+    <button onclick="doLogout()" style="margin-top:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:6px 16px;color:#fff;font-family:Cairo,sans-serif;font-size:.8rem;cursor:pointer">🚪 تسجيل الخروج</button>
   </div>
 </header>
 
@@ -273,6 +292,14 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
             <td><input type="number" id="p3_t"   placeholder="0" min="0" step="0.1" oninput="autoCalc()"></td>
             <td class="vol-cell" id="v3">—</td>
           </tr>
+          <tr id="row4">
+            <td><div class="row-label"><div class="row-dot" style="background:#A0522D;"></div>ألواح إضافية</div></td>
+            <td><input type="number" id="p4_qty" placeholder="0" min="0" oninput="autoCalc()"></td>
+            <td><input type="number" id="p4_l"   placeholder="0" min="0" step="0.1" oninput="autoCalc()"></td>
+            <td><input type="number" id="p4_w"   placeholder="0" min="0" step="0.1" oninput="autoCalc()"></td>
+            <td><input type="number" id="p4_t"   placeholder="0" min="0" step="0.1" oninput="autoCalc()"></td>
+            <td class="vol-cell" id="v4">—</td>
+          </tr>
           <tr class="total-row">
             <td colspan="5" style="text-align:right; padding-right:12px;">إجمالي حجم الخشب للبالتة الواحدة</td>
             <td class="vol-cell" id="vTotal" style="font-size:1rem;">—</td>
@@ -337,6 +364,48 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
         </div>
       </div>
 
+      <!-- VAT TOGGLE -->
+      <div class="vat-toggle" id="vatToggleBox">
+        <div class="vat-toggle-right">
+          <div class="vat-icon">🧾</div>
+          <div>
+            <div class="vat-title">إضافة ضريبة القيمة المضافة (VAT)</div>
+            <div class="vat-sub">14% من الإجمالي</div>
+          </div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="vatCheck" onchange="autoCalc()">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- QUOTATION FIELDS -->
+      <div class="divider"></div>
+      <div style="background:linear-gradient(135deg,#f5f0e8,#ede3d0);border:1.5px solid var(--wood-light);border-radius:10px;padding:16px 18px;margin-top:4px;">
+        <div style="font-weight:800;font-size:0.97rem;color:var(--wood-dark);margin-bottom:12px;">📋 بيانات عرض السعر للعميل</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>مدة سريان العرض</label>
+            <input type="text" id="quoteValidity" placeholder="مثال: 15 يوم">
+          </div>
+          <div class="form-group">
+            <label>أجل / مدة السداد</label>
+            <input type="text" id="quotePayment" placeholder="مثال: فوري / 30 يوم">
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <label style="font-size:0.82rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;">السعر بالنسبة للنقل</label>
+          <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-weight:700;font-size:0.95rem;padding:9px 16px;background:var(--sawdust);border:1.5px solid var(--sawdust-dark);border-radius:8px;flex:1;">
+              <input type="radio" name="transport" value="included" style="accent-color:var(--wood);width:16px;height:16px;"> يشمل النقل
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-weight:700;font-size:0.95rem;padding:9px 16px;background:var(--sawdust);border:1.5px solid var(--sawdust-dark);border-radius:8px;flex:1;">
+              <input type="radio" name="transport" value="excluded" checked style="accent-color:var(--wood);width:16px;height:16px;"> لا يشمل النقل
+            </label>
+          </div>
+        </div>
+      </div>
+
       <div class="btn-row no-print">
         <button class="btn-calc" onclick="showResult()">📊 عرض التقرير الكامل</button>
         <button class="btn-reset" onclick="resetForm()">🔄 تصفير</button>
@@ -358,7 +427,8 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
         <button onclick="saveSpec()" style="font-family:Cairo,sans-serif;font-size:1.05rem;font-weight:900;padding:13px 28px;border:none;border-radius:9px;cursor:pointer;background:#FFE4B5;color:#5C3D1E;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,0.2);">💾 حفظ المواصفة</button>
       </div>
       <div class="btn-row no-print">
-        <button class="btn-pdf"       onclick="downloadPDF()">📄 تحميل PDF</button>
+        <button class="btn-pdf"       onclick="downloadPDF()">📄 PDF داخلي</button>
+        <button style="background:#1a5276;color:white;font-family:Cairo,sans-serif;font-size:0.97rem;font-weight:700;padding:11px 18px;border:none;border-radius:8px;cursor:pointer;" onclick="downloadQuotePDF()">📋 عرض سعر للعميل</button>
         <button class="btn-whatsapp"  onclick="sendWhatsApp()">💬 إرسال واتساب</button>
         <button class="btn-print"     onclick="window.print()">🖨️ طباعة</button>
       </div>
@@ -391,11 +461,17 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
     const vol1 = pieceVol('p1_qty','p1_l','p1_w','p1_t');
     const vol2 = pieceVol('p2_qty','p2_l','p2_w','p2_t');
     const vol3 = pieceVol('p3_qty','p3_l','p3_w','p3_t');
-    const totalVol = vol1 + vol2 + vol3;
+    const vol4 = pieceVol('p4_qty','p4_l','p4_w','p4_t');
+    const totalVol = vol1 + vol2 + vol3 + vol4;
 
     document.getElementById('v1').textContent     = vol1 > 0 ? fmtM3(vol1) : '—';
     document.getElementById('v2').textContent     = vol2 > 0 ? fmtM3(vol2) : '—';
     document.getElementById('v3').textContent     = vol3 > 0 ? fmtM3(vol3) : '—';
+    document.getElementById('v4').textContent     = vol4 > 0 ? fmtM3(vol4) : '—';
+    // hide row4 from print/report if empty
+    const row4El = document.getElementById('row4');
+    if (vol4 > 0) { row4El.classList.remove('row4-hide'); }
+    else { row4El.classList.add('row4-hide'); }
     document.getElementById('vTotal').textContent = totalVol > 0 ? fmtM3(totalVol) : '—';
 
     const woodPrice = v('woodPrice');
@@ -423,7 +499,11 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
 
     document.getElementById('totalDisplay').value = total > 0 ? total.toFixed(2) : '';
 
-    return { vol1, vol2, vol3, totalVol, woodCost, extra, total, selling, woodPrice, profitMargin: profit };
+    const vatEnabled = document.getElementById('vatCheck').checked;
+    const vatAmt  = vatEnabled ? selling * 0.14 : 0;
+    const sellingWithVat = selling + vatAmt;
+    return { vol1, vol2, vol3, vol4, totalVol, woodCost, extra, total, selling,
+             vatEnabled, vatAmt, sellingWithVat, woodPrice, profitMargin: profit };
   }
 
   function showResult() {
@@ -443,6 +523,7 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
     if (d.vol1 > 0) html += `<div class="breakdown-row sub"><span>↳ قوائم — ${fmtM3(d.vol1)}</span><span class="val">${fmt(d.woodPrice * d.vol1)}</span></div>`;
     if (d.vol2 > 0) html += `<div class="breakdown-row sub"><span>↳ ألواح — ${fmtM3(d.vol2)}</span><span class="val">${fmt(d.woodPrice * d.vol2)}</span></div>`;
     if (d.vol3 > 0) html += `<div class="breakdown-row sub"><span>↳ عوارض الربط — ${fmtM3(d.vol3)}</span><span class="val">${fmt(d.woodPrice * d.vol3)}</span></div>`;
+    if (d.vol4 > 0) html += `<div class="breakdown-row sub"><span>↳ ألواح إضافية — ${fmtM3(d.vol4)}</span><span class="val">${fmt(d.woodPrice * d.vol4)}</span></div>`;
 
     // Extra costs section
     const extras = [
@@ -483,6 +564,17 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
       html += `<div class="breakdown-row grand"><span>💰 ${finalLbl}</span><span class="val">${fmt(finalVal)}</span></div>`;
     }
 
+    // VAT
+    if (d.vatEnabled) {
+      const baseForVat = d.profitMargin > 0 ? d.selling : d.total;
+      const vatRow     = baseForVat * 0.14;
+      const grandTotal = baseForVat + vatRow;
+      const qtyFinal   = qty > 1 ? grandTotal * qty : grandTotal;
+      html += `<div class="breakdown-row" style="margin-top:8px;"><span>🧾 ضريبة القيمة المضافة (14%)</span><span class="val">${fmt(vatRow)}</span></div>`;
+      html += `<div class="breakdown-row grand" style="background:#7a4f2a;color:#FFE4B5;"><span>✅ الإجمالي شامل الضريبة${qty>1?' (للبالتة)':''}</span><span class="val">${fmt(grandTotal)}</span></div>`;
+      if (qty > 1) html += `<div class="breakdown-row grand" style="background:#5C3D1E;color:#FFE4B5;font-size:1.2rem;"><span>✅ إجمالي الطلبية شامل الضريبة</span><span class="val">${fmt(qtyFinal)}</span></div>`;
+    }
+
     document.getElementById('breakdown').innerHTML = html;
     document.getElementById('resultSection').style.display = 'block';
     document.getElementById('resultSection').scrollIntoView({ behavior:'smooth', block:'start' });
@@ -496,14 +588,17 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
       p1_qty:v('p1_qty'), p1_l:v('p1_l'), p1_w:v('p1_w'), p1_t:v('p1_t'),
       p2_qty:v('p2_qty'), p2_l:v('p2_l'), p2_w:v('p2_w'), p2_t:v('p2_t'),
       p3_qty:v('p3_qty'), p3_l:v('p3_l'), p3_w:v('p3_w'), p3_t:v('p3_t'),
+      p4_qty:v('p4_qty'), p4_l:v('p4_l'), p4_w:v('p4_w'), p4_t:v('p4_t'),
       costNails:v('costNails'), costLabor:v('costLabor'), costElec:v('costElec'),
       costSteam:v('costSteam'), costTransport:v('costTransport'), costOther:v('costOther'),
-      profitMargin:v('profitMargin'), totalCost: d.total, sellingPrice: d.selling,
+      profitMargin:v('profitMargin'), vatEnabled: document.getElementById('vatCheck').checked, totalCost: d.total, sellingPrice: d.selling, sellingWithVat: d.sellingWithVat,
+      quoteValidity: s('quoteValidity'), quotePayment: s('quotePayment'),
+      quoteTransport: document.querySelector('input[name="transport"]:checked')?.value || 'excluded',
       savedAt: new Date().toLocaleString('ar-EG')
     };
     const specs = JSON.parse(localStorage.getItem('palletSpecs') || '[]');
     specs.unshift(spec);
-    localStorage.setItem('palletSpecs', JSON.stringify(specs.slice(0,20)));
+    localStorage.setItem('palletSpecs', JSON.stringify(specs.slice(0,200)));
     renderSaved();
     alert('✅ تم حفظ المواصفة!');
   }
@@ -531,11 +626,11 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
     let y = 0;
 
     // Header background
-    doc.setFillColor(brown[0],brown[1],brown[2]);
+    doc.setFillColor(92,61,30);
     doc.rect(0, 0, W, 42, 'F');
 
     // Gold line
-    doc.setFillColor(brownL[0],brownL[1],brownL[2]);
+    doc.setFillColor(92,61,30);
     doc.rect(0, 42, W, 1.5, 'F');
 
     // Company name (use latin chars for PDF compat, Arabic rendered via canvas trick not available in basic jsPDF)
@@ -544,10 +639,10 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
     doc.setFont('helvetica', 'bold');
     doc.text('Al-Masriya Al-Khaleejiya Wood Industries', W/2, 14, {align:'center'});
     doc.setFontSize(8);
-    doc.setTextColor(brownL[0],brownL[1],brownL[2]);
+    doc.setTextColor(92,61,30);
     doc.text('EGYPTIAN GULF WOOD INDUSTRIES', W/2, 20, {align:'center'});
 
-    doc.setFillColor(brownL[0],brownL[1],brownL[2]);
+    doc.setFillColor(92,61,30);
     doc.rect(60, 23, 90, 0.5, 'F');
 
     doc.setTextColor(245, 237, 216);
@@ -561,9 +656,9 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
     y = 52;
 
     // Info bar
-    doc.setFillColor(cream[0],cream[1],cream[2]);
+    doc.setFillColor(245,237,216);
     doc.roundedRect(10, y, W-20, 18, 2, 2, 'F');
-    doc.setTextColor(darkText[0],darkText[1],darkText[2]);
+    doc.setTextColor(26,17,9);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.text('Spec / Model:', 15, y+7);
@@ -583,7 +678,7 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
 
     // Section helper
     function sectionTitle(title) {
-      doc.setFillColor(brown[0],brown[1],brown[2]);
+      doc.setFillColor(92,61,30);
       doc.roundedRect(10, y, W-20, 8, 1, 1, 'F');
       doc.setTextColor(255,255,255);
       doc.setFontSize(9);
@@ -592,10 +687,10 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
       y += 12;
     }
 
-    function row(label, val, sub) {
+    function row(label, val, sub=false) {
       doc.setFillColor(sub ? 250 : 255, sub ? 248 : 253, sub ? 240 : 248);
       doc.rect(10, y, W-20, 7, 'F');
-      doc.setTextColor(darkText[0],darkText[1],darkText[2]);
+      doc.setTextColor(26,17,9);
       doc.setFontSize(sub ? 8 : 9);
       doc.setFont('helvetica', sub ? 'normal' : 'bold');
       doc.text(label, sub ? 18 : 15, y+5);
@@ -607,9 +702,9 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
     }
 
     function totalRow(label, val, highlight) {
-      var _fc=highlight?brownL:cream; doc.setFillColor(_fc[0],_fc[1],_fc[2]);
+      if (highlight) { doc.setFillColor(196,154,108); } else { doc.setFillColor(245,237,216); }
       doc.roundedRect(10, y, W-20, 9, 1, 1, 'F');
-      var _tc=highlight?brown:darkText; doc.setTextColor(_tc[0],_tc[1],_tc[2]);
+      if (highlight) { doc.setTextColor(92,61,30); } else { doc.setTextColor(26,17,9); }
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text(label, 15, y+6.5);
@@ -620,9 +715,10 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
     // Wood section
     sectionTitle('Wood Cost');
     row('Total Volume (m3):', fmtM3(d.totalVol));
-    if (d.vol1 > 0) row("  Qawa'em (Uprights):", fmtM3(d.vol1), true);
+    if (d.vol1 > 0) row('  Qawaem (Uprights):', fmtM3(d.vol1), true);
     if (d.vol2 > 0) row('  Alwah (Boards):', fmtM3(d.vol2), true);
     if (d.vol3 > 0) row('  Awarid Rabt (Crossbeams):', fmtM3(d.vol3), true);
+    if (d.vol4 > 0) row('  Additional Boards:', fmtM3(d.vol4), true);
     row('Wood Price /m3:', d.woodPrice.toFixed(2) + ' EGP');
     totalRow('Wood Cost / Pallet:', d.woodCost.toFixed(2) + ' EGP');
 
@@ -650,10 +746,20 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
         totalRow('Total Selling Price:', (d.selling * qty).toFixed(2) + ' EGP', true);
     }
 
+    // VAT
+    if (d.vatEnabled) {
+      const baseForVat = d.profitMargin > 0 ? d.selling : d.total;
+      const vatRow = baseForVat * 0.14;
+      const grandTotal = baseForVat + vatRow;
+      row('VAT (14%):', vatRow.toFixed(2) + ' EGP');
+      totalRow('TOTAL incl. VAT / Pallet:', grandTotal.toFixed(2) + ' EGP', true);
+      if (qty > 1) totalRow('TOTAL Order incl. VAT:', (grandTotal * qty).toFixed(2) + ' EGP', true);
+    }
+
     // Footer
-    doc.setFillColor(brown[0],brown[1],brown[2]);
+    doc.setFillColor(92,61,30);
     doc.rect(0, H-14, W, 14, 'F');
-    doc.setTextColor(brownL[0],brownL[1],brownL[2]);
+    doc.setTextColor(92,61,30);
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'normal');
     doc.text('Egyptian Gulf Wood Industries  |  Pallet Cost Calculator', W/2, H-8, {align:'center'});
@@ -701,11 +807,237 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
       msg += `\n📦 الكمية: ${qty} بالتة\n`;
       msg += `💰 *إجمالي ${d.profitMargin>0?'سعر البيع':'التكلفة'}: ${((d.profitMargin>0?d.selling:d.total)*qty).toFixed(2)} جنيه*\n`;
     }
+    if (d.vatEnabled) {
+      const baseForVat = d.profitMargin > 0 ? d.selling : d.total;
+      const vatRow = baseForVat * 0.14;
+      const grandTotal = baseForVat + vatRow;
+      msg += `🧾 ضريبة القيمة المضافة (14%): ${vatRow.toFixed(2)} جنيه\n`;
+      msg += `✅ *الإجمالي شامل الضريبة: ${grandTotal.toFixed(2)} جنيه*\n`;
+      if (qty > 1) msg += `✅ *إجمالي الطلبية شامل الضريبة: ${(grandTotal*qty).toFixed(2)} جنيه*\n`;
+    }
     msg += '━━━━━━━━━━━━━━━━━━';
 
     const encoded = encodeURIComponent(msg);
     window.open('https://wa.me/?text=' + encoded, '_blank');
   }
+
+  // ─── QUOTE PDF ──────────────────────────────────────────────
+  function downloadQuotePDF() {
+    const { jsPDF } = window.jspdf;
+    const d         = autoCalc();
+    const specName  = s('specName')    || 'N/A';
+    const client    = s('companyName') || 'N/A';
+    const validity  = s('quoteValidity') || 'N/A';
+    const payment   = s('quotePayment')  || 'N/A';
+    const transport = document.querySelector('input[name="transport"]:checked')?.value || 'excluded';
+    const qty       = Math.max(1, v('quantity') || 1);
+    const date      = new Date().toLocaleDateString('en-GB');
+
+    // Prices
+    const unitPrice   = d.profitMargin > 0 ? d.selling : d.total;
+    const vatAmt      = unitPrice * 0.14;
+    const unitWithVat = unitPrice + vatAmt;
+    const totalNet    = unitPrice * qty;
+    const totalVat    = vatAmt * qty;
+    const totalGross  = unitWithVat * qty;
+
+    // Pallet pieces
+    const pieces = [
+      { name:'Qawaem (Uprights)',    qty:v('p1_qty'), l:v('p1_l'), w:v('p1_w'), t:v('p1_t') },
+      { name:'Alwah (Boards)',       qty:v('p2_qty'), l:v('p2_l'), w:v('p2_w'), t:v('p2_t') },
+      { name:'Awarid Rabt (Crossbeams)', qty:v('p3_qty'), l:v('p3_l'), w:v('p3_w'), t:v('p3_t') },
+      { name:'Additional Boards',    qty:v('p4_qty'), l:v('p4_l'), w:v('p4_w'), t:v('p4_t') },
+    ].filter(p => p.qty > 0 && p.l > 0);
+
+    const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    const W=210, H=297;
+    let y = 0;
+
+    // ── HEADER ──────────────────────────────────────
+    doc.setFillColor(26,60,100);
+    doc.rect(0,0,W,46,'F');
+    doc.setFillColor(196,154,108);
+    doc.rect(0,46,W,2,'F');
+
+    doc.setTextColor(255,228,181);
+    doc.setFontSize(14); doc.setFont('helvetica','bold');
+    doc.text('Al-Masriya Al-Khaleejiya Wood Industries', W/2, 14, {align:'center'});
+    doc.setFontSize(7.5); doc.setTextColor(196,154,108);
+    doc.text('EGYPTIAN GULF WOOD INDUSTRIES', W/2, 20, {align:'center'});
+    doc.setFillColor(255,228,181);
+    doc.rect(65,23,80,0.5,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(15); doc.setFont('helvetica','bold');
+    doc.text('PRICE QUOTATION', W/2, 33, {align:'center'});
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(196,154,108);
+    doc.text('Arad Ser', W/2, 40, {align:'center'});
+
+    y = 56;
+
+    // ── INFO TABLE ──────────────────────────────────
+    // Left box: Client info
+    doc.setFillColor(245,240,230);
+    doc.roundedRect(10, y, 90, 28, 2, 2, 'F');
+    doc.setDrawColor(196,154,108); doc.setLineWidth(0.4);
+    doc.roundedRect(10, y, 90, 28, 2, 2, 'S');
+
+    doc.setTextColor(92,61,30); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text('CLIENT', 15, y+7);
+    doc.setFont('helvetica','normal'); doc.setTextColor(26,17,9); doc.setFontSize(9);
+    doc.text(client, 15, y+14);
+    doc.setFontSize(7.5); doc.setTextColor(92,61,30); doc.setFont('helvetica','bold');
+    doc.text('SPEC / MODEL', 15, y+21);
+    doc.setFont('helvetica','normal'); doc.setTextColor(26,17,9); doc.setFontSize(8.5);
+    doc.text(specName, 15, y+27);
+
+    // Right box: Quote details
+    doc.setFillColor(245,240,230);
+    doc.roundedRect(108, y, 92, 28, 2, 2, 'F');
+    doc.setDrawColor(196,154,108);
+    doc.roundedRect(108, y, 92, 28, 2, 2, 'S');
+
+    doc.setTextColor(92,61,30); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text('DATE', 113, y+7);
+    doc.setFont('helvetica','normal'); doc.setTextColor(26,17,9); doc.setFontSize(9);
+    doc.text(date, 113, y+14);
+    doc.setTextColor(92,61,30); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text('QUANTITY', 155, y+7);
+    doc.setFont('helvetica','normal'); doc.setTextColor(26,17,9); doc.setFontSize(9);
+    doc.text(qty+' Pallets', 155, y+14);
+    doc.setTextColor(92,61,30); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text('VALIDITY', 113, y+21);
+    doc.setFont('helvetica','normal'); doc.setTextColor(26,17,9); doc.setFontSize(8);
+    doc.text(validity, 113, y+27);
+    doc.setTextColor(92,61,30); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text('PAYMENT', 155, y+21);
+    doc.setFont('helvetica','normal'); doc.setTextColor(26,17,9); doc.setFontSize(8);
+    doc.text(payment, 155, y+27);
+
+    y += 36;
+
+    // ── DIMENSIONS ──────────────────────────────────
+    doc.setFillColor(26,60,100);
+    doc.roundedRect(10, y, W-20, 8, 1, 1, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    doc.text('PALLET DIMENSIONS', W/2, y+5.5, {align:'center'});
+    y += 8;
+
+    // Table header
+    doc.setFillColor(210,225,245);
+    doc.rect(10, y, W-20, 7, 'F');
+    doc.setTextColor(26,60,100); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text('Part', 14, y+5);
+    doc.text('Qty', 72, y+5);
+    doc.text('L(cm)', 90, y+5);
+    doc.text('W(cm)', 114, y+5);
+    doc.text('T(cm)', 138, y+5);
+    doc.text('Vol(m3)', 162, y+5);
+    y += 7;
+
+    pieces.forEach((p, i) => {
+      const vol = p.qty * p.l * p.w * p.t / 1000000;
+      doc.setFillColor(i%2===0 ? 255:250, i%2===0 ? 255:252, i%2===0 ? 255:248);
+      doc.rect(10, y, W-20, 7, 'F');
+      doc.setDrawColor(220,210,195); doc.line(10, y+7, W-10, y+7);
+      doc.setTextColor(26,17,9); doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.text(p.name,         14,  y+5);
+      doc.text(String(p.qty),  72,  y+5);
+      doc.text(String(p.l),    90,  y+5);
+      doc.text(String(p.w),    114, y+5);
+      doc.text(String(p.t),    138, y+5);
+      doc.text(vol.toFixed(5), 162, y+5);
+      y += 7;
+    });
+
+    y += 8;
+
+    // ── PRICING ─────────────────────────────────────
+    doc.setFillColor(26,60,100);
+    doc.roundedRect(10, y, W-20, 8, 1, 1, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    doc.text('PRICING', W/2, y+5.5, {align:'center'});
+    y += 8;
+
+    function pRow(label, val, bg, textColor, bold) {
+      doc.setFillColor(bg[0], bg[1], bg[2]);
+      doc.rect(10, y, W-20, 9, 'F');
+      doc.setDrawColor(220,210,195); doc.line(10, y+9, W-10, y+9);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.setFontSize(bold ? 10 : 9);
+      doc.setFont('helvetica', bold ? 'bold' : 'normal');
+      doc.text(label, 14, y+6.5);
+      doc.text(val+' EGP', W-12, y+6.5, {align:'right'});
+      y += 9;
+    }
+
+    // Unit price excl VAT
+    pRow('Unit Price (excl. VAT)', unitPrice.toFixed(2),
+      [255,255,255], [26,17,9], false);
+
+    // VAT line
+    pRow('VAT 14%', vatAmt.toFixed(2),
+      [255,250,235], [150,100,20], false);
+
+    // Unit price incl VAT
+    pRow('Unit Price (incl. VAT)', unitWithVat.toFixed(2),
+      [235,245,255], [26,60,100], true);
+
+    if (qty > 1) {
+      y += 3;
+      pRow('Quantity: '+qty+' Pallets  |  Net Total', totalNet.toFixed(2),
+        [248,248,248], [26,17,9], false);
+      pRow('VAT Total (14%)', totalVat.toFixed(2),
+        [255,250,235], [150,100,20], false);
+    }
+
+    // Grand total
+    doc.setFillColor(196,154,108);
+    doc.roundedRect(10, y, W-20, 11, 1, 1, 'F');
+    doc.setTextColor(26,60,100);
+    doc.setFontSize(11); doc.setFont('helvetica','bold');
+    const grandLabel = qty > 1 ? 'TOTAL (incl. VAT) - '+qty+' Pallets' : 'TOTAL (incl. VAT)';
+    doc.text(grandLabel, 14, y+7.5);
+    doc.text(totalGross.toFixed(2)+' EGP', W-12, y+7.5, {align:'right'});
+    y += 15;
+
+    // ── TRANSPORT NOTE ───────────────────────────────
+    doc.setFillColor(transport === 'included' ? 235 : 255,
+                     transport === 'included' ? 245 : 245,
+                     transport === 'included' ? 235 : 235);
+    doc.roundedRect(10, y, W-20, 9, 1, 1, 'F');
+    doc.setDrawColor(transport === 'included' ? 100 : 180,
+                     transport === 'included' ? 160 : 100,
+                     transport === 'included' ? 100 : 100);
+    doc.roundedRect(10, y, W-20, 9, 1, 1, 'S');
+    doc.setTextColor(26,17,9); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    const transText = transport === 'included'
+      ? 'Price INCLUDES delivery / transportation'
+      : 'Price EXCLUDES delivery / transportation';
+    doc.text((transport === 'included' ? '✓ ' : '✗ ') + transText, 14, y+6);
+    y += 14;
+
+    // ── TERMS ────────────────────────────────────────
+    doc.setFillColor(248,248,252);
+    doc.roundedRect(10, y, W-20, 20, 1, 1, 'F');
+    doc.setDrawColor(200,210,230);
+    doc.roundedRect(10, y, W-20, 20, 1, 1, 'S');
+    doc.setTextColor(60,60,80); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Validity: This quotation is valid for '+validity+' from the date of issue.', 14, y+7);
+    doc.text('Payment: '+payment, 14, y+13);
+    doc.text('Prices are subject to change after the validity period.', 14, y+19);
+
+    // ── FOOTER ───────────────────────────────────────
+    doc.setFillColor(26,60,100);
+    doc.rect(0, H-16, W, 16, 'F');
+    doc.setFillColor(196,154,108); doc.rect(0, H-16, W, 1.5, 'F');
+    doc.setTextColor(255,228,181); doc.setFontSize(8); doc.setFont('helvetica','bold');
+    doc.text('Egyptian Gulf Wood Industries', W/2, H-9, {align:'center'});
+    doc.setTextColor(180,200,220); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text('Quotation Date: '+date+'  |  This is a computer-generated quotation', W/2, H-4, {align:'center'});
+
+    doc.save('Quote-'+client+'-'+date+'.pdf');
+  }
+
 
   function renderSaved() {
     const specs = JSON.parse(localStorage.getItem('palletSpecs') || '[]');
@@ -733,11 +1065,17 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
     const sp = specs[i]; if (!sp) return;
     const fields = ['woodPrice','quantity',
       'p1_qty','p1_l','p1_w','p1_t','p2_qty','p2_l','p2_w','p2_t',
-      'p3_qty','p3_l','p3_w','p3_t',
+      'p3_qty','p3_l','p3_w','p3_t','p4_qty','p4_l','p4_w','p4_t',
       'costNails','costLabor','costElec','costSteam','costTransport','costOther','profitMargin'];
     document.getElementById('specName').value    = sp.specName;
     document.getElementById('companyName').value = sp.companyName;
     fields.forEach(f => { if (sp[f] !== undefined) document.getElementById(f).value = sp[f] || ''; });
+    document.getElementById('vatCheck').checked = !!sp.vatEnabled;
+    document.getElementById('quoteValidity').value = sp.quoteValidity || '';
+    document.getElementById('quotePayment').value  = sp.quotePayment  || '';
+    const tVal = sp.quoteTransport || 'excluded';
+    const tRadio = document.querySelector('input[name="transport"][value="'+tVal+'"]');
+    if (tRadio) tRadio.checked = true;
     autoCalc();
     window.scrollTo({ top:0, behavior:'smooth' });
   }
@@ -753,7 +1091,7 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
   function resetForm() {
     const ids = ['woodPrice','quantity',
       'p1_qty','p1_l','p1_w','p1_t','p2_qty','p2_l','p2_w','p2_t',
-      'p3_qty','p3_l','p3_w','p3_t',
+      'p3_qty','p3_l','p3_w','p3_t','p4_qty','p4_l','p4_w','p4_t',
       'costNails','costLabor','costElec','costSteam','costTransport','costOther','profitMargin'];
     ids.forEach(id => document.getElementById(id).value = '');
     document.getElementById('specName').value = '';
@@ -762,7 +1100,11 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
     document.getElementById('totalDisplay').value = '';
     document.getElementById('extraTotalRow').style.display = 'none';
     document.getElementById('woodSummary').style.display = 'none';
-    ['v1','v2','v3','vTotal'].forEach(id => document.getElementById(id).textContent = '—');
+    ['v1','v2','v3','v4','vTotal'].forEach(id => document.getElementById(id).textContent = '—');
+    document.getElementById('vatCheck').checked = false;
+    document.getElementById('quoteValidity').value = '';
+    document.getElementById('quotePayment').value  = '';
+    document.getElementById('quoteNotes').value    = '';
   }
 
   // Load spec from archive if requested
@@ -775,11 +1117,17 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
       if (sp) {
         const fields = ['woodPrice','quantity',
           'p1_qty','p1_l','p1_w','p1_t','p2_qty','p2_l','p2_w','p2_t',
-          'p3_qty','p3_l','p3_w','p3_t',
+          'p3_qty','p3_l','p3_w','p3_t','p4_qty','p4_l','p4_w','p4_t',
           'costNails','costLabor','costElec','costSteam','costTransport','costOther','profitMargin'];
         document.getElementById('specName').value    = sp.specName || '';
         document.getElementById('companyName').value = sp.companyName || '';
         fields.forEach(f => { if (sp[f] !== undefined) document.getElementById(f).value = sp[f] || ''; });
+        document.getElementById('vatCheck').checked = !!sp.vatEnabled;
+        document.getElementById('quoteValidity').value = sp.quoteValidity || '';
+        document.getElementById('quotePayment').value  = sp.quotePayment  || '';
+        const tVal2 = sp.quoteTransport || 'excluded';
+        const tRadio2 = document.querySelector('input[name="transport"][value="'+tVal2+'"]');
+        if (tRadio2) tRadio2.checked = true;
         autoCalc();
         setTimeout(() => window.scrollTo({top:0,behavior:'smooth'}), 100);
       }
@@ -800,7 +1148,6 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
     document.getElementById('login-page').style.display = 'flex';
     document.body.classList.add('not-logged-in');
   }
-
   function showApp(){
     document.getElementById('login-page').style.display = 'none';
     document.body.classList.remove('not-logged-in');
@@ -826,7 +1173,7 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
       }
     } catch(e){ console.log('load skipped:', e); }
     showApp();
-    renderSaved();
+    if(typeof renderSaved === 'function') renderSaved();
   }
 
   window.doLogin = async function(){
@@ -852,28 +1199,32 @@ body.not-logged-in > *:not(#login-page) { display:none !important; }
     sbUser=null;
     localStorage.removeItem('palletSpecs');
     showLogin();
-    renderSaved();
+    if(typeof renderSaved === 'function') renderSaved();
   };
 
   // Patch saveSpec
-  var _orig = window.saveSpec;
-  window.saveSpec = function(){
-    _orig();
-    setTimeout(function(){
-      var specs = JSON.parse(localStorage.getItem('palletSpecs')||'[]');
-      window.sbSaveSpecs(specs);
-    }, 100);
-  };
+  if(typeof window.saveSpec === 'function'){
+    var _orig = window.saveSpec;
+    window.saveSpec = function(){
+      _orig();
+      setTimeout(function(){
+        var specs = JSON.parse(localStorage.getItem('palletSpecs')||'[]');
+        window.sbSaveSpecs(specs);
+      }, 100);
+    };
+  }
 
   // Patch deleteSpec
-  var _origDel = window.deleteSpec;
-  window.deleteSpec = function(i){
-    _origDel(i);
-    setTimeout(function(){
-      var specs = JSON.parse(localStorage.getItem('palletSpecs')||'[]');
-      window.sbSaveSpecs(specs);
-    }, 100);
-  };
+  if(typeof window.deleteSpec === 'function'){
+    var _origDel = window.deleteSpec;
+    window.deleteSpec = function(i){
+      _origDel(i);
+      setTimeout(function(){
+        var specs = JSON.parse(localStorage.getItem('palletSpecs')||'[]');
+        window.sbSaveSpecs(specs);
+      }, 100);
+    };
+  }
 
   // Check session
   var sess = sessionStorage.getItem('sb_user_pallet');
