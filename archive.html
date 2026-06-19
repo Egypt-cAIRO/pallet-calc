@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>أرشيف الشركات والمواصفات</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --wood: #8B5E3C; --wood-dark: #5C3D1E; --wood-light: #C49A6C;
+    --sawdust: #F5EDD8; --sawdust-dark: #EAD9B8; --ink: #1A1109;
+    --muted: #7A6650; --green: #3A7D44; --red: #C0392B; --white: #FFFDF8;
+    --shadow: 0 2px 16px rgba(90,50,10,0.12); --radius: 10px;
+  }
+  body { font-family: 'Cairo', sans-serif; background: var(--sawdust); color: var(--ink); min-height: 100vh; padding: 0 0 60px; }
+
+  header {
+    background: linear-gradient(135deg, #2C1A0E 0%, #5C3D1E 60%, #3a2410 100%);
+    color: var(--sawdust); text-align: center; position: relative; overflow: hidden; padding: 0;
+  }
+  header::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent, var(--wood-light), #f0c070, var(--wood-light), transparent); }
+  .header-inner { position: relative; padding: 20px 24px 24px; }
+  .header-top-bar { display: flex; align-items: center; justify-content: center; gap: 14px;
+    margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid rgba(196,154,108,0.35); }
+  .header-logo { font-size: 2.4rem; line-height: 1; }
+  .header-divider { width: 1px; height: 40px; background: rgba(196,154,108,0.4); }
+  .header-company-name { font-size: 1.3rem; font-weight: 900; color: #FFE4B5; }
+  .header-company-sub { font-size: 0.72rem; color: var(--wood-light); letter-spacing: 2.5px; margin-top: 3px; }
+  header h1 { font-size: 1.3rem; font-weight: 700; color: var(--sawdust); }
+  header p { font-size: 0.82rem; color: var(--wood-light); margin-top: 5px; }
+
+  .nav-bar { background: var(--wood-dark); padding: 10px 20px; display: flex; gap: 10px; align-items: center; }
+  .nav-btn { font-family: 'Cairo', sans-serif; font-size: 0.88rem; font-weight: 700;
+    padding: 7px 18px; border: none; border-radius: 7px; cursor: pointer; transition: all 0.18s; }
+  .nav-btn.active { background: var(--wood-light); color: var(--wood-dark); }
+  .nav-btn.inactive { background: rgba(255,255,255,0.1); color: var(--sawdust); }
+  .nav-btn.inactive:hover { background: rgba(255,255,255,0.2); }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+
+  /* SEARCH BAR */
+  .search-bar { display: flex; gap: 10px; margin-top: 20px; align-items: center; }
+  .search-bar input { flex: 1; border: 1.5px solid var(--sawdust-dark); border-radius: 8px;
+    padding: 10px 14px; font-family: 'Cairo', sans-serif; font-size: 0.97rem;
+    background: var(--white); color: var(--ink); }
+  .search-bar input:focus { outline: none; border-color: var(--wood); }
+  .search-bar select { border: 1.5px solid var(--sawdust-dark); border-radius: 8px;
+    padding: 10px 12px; font-family: 'Cairo', sans-serif; font-size: 0.9rem;
+    background: var(--white); color: var(--ink); cursor: pointer; }
+
+  /* STATS ROW */
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 16px; }
+  .stat-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 16px 20px; display: flex; flex-direction: column; gap: 4px; }
+  .stat-val { font-size: 1.8rem; font-weight: 900; color: var(--wood-dark); }
+  .stat-lbl { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
+
+  /* COMPANIES LIST */
+  .companies-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+  .company-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow);
+    overflow: hidden; cursor: pointer; transition: transform 0.18s, box-shadow 0.18s; border: 2px solid transparent; }
+  .company-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(90,50,10,0.18); }
+  .company-card.active { border-color: var(--wood); }
+  .company-card-header { background: var(--wood); color: var(--white); padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between; }
+  .company-card-name { font-weight: 900; font-size: 1rem; }
+  .company-card-count { background: rgba(255,255,255,0.2); border-radius: 99px;
+    padding: 2px 10px; font-size: 0.8rem; font-weight: 700; }
+  .company-card-body { padding: 14px 16px; }
+  .company-latest { font-size: 0.82rem; color: var(--muted); }
+  .company-latest strong { color: var(--ink); }
+  .company-price-range { font-size: 0.88rem; margin-top: 6px; font-weight: 700; color: var(--wood-dark); }
+
+  /* SPECS PANEL */
+  .specs-panel { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow);
+    margin-top: 20px; overflow: hidden; display: none; }
+  .specs-panel.show { display: block; }
+  .specs-panel-header { background: var(--wood-dark); color: var(--white); padding: 14px 20px;
+    display: flex; justify-content: space-between; align-items: center; }
+  .specs-panel-title { font-weight: 900; font-size: 1.05rem; }
+  .specs-panel-close { background: rgba(255,255,255,0.15); border: none; color: var(--white);
+    font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 700;
+    padding: 5px 12px; border-radius: 6px; cursor: pointer; }
+  .specs-list { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+
+  .spec-item { background: var(--sawdust); border-radius: 9px; border: 1.5px solid var(--sawdust-dark);
+    padding: 14px 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .spec-item:hover { border-color: var(--wood-light); }
+  .spec-info { flex: 1; }
+  .spec-name { font-weight: 900; font-size: 1rem; color: var(--ink); }
+  .spec-meta { font-size: 0.8rem; color: var(--muted); margin-top: 3px; }
+  .spec-prices { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .price-tag { display: flex; flex-direction: column; background: var(--white);
+    border-radius: 7px; padding: 6px 12px; border: 1px solid var(--sawdust-dark); }
+  .price-tag .pt-lbl { font-size: 0.7rem; color: var(--muted); font-weight: 600; }
+  .price-tag .pt-val { font-size: 1rem; font-weight: 900; color: var(--wood-dark); direction: ltr; }
+  .price-tag.selling .pt-val { color: var(--green); }
+  .spec-actions { display: flex; flex-direction: column; gap: 6px; }
+  .btn-sm { font-family: 'Cairo', sans-serif; font-size: 0.8rem; font-weight: 700;
+    padding: 6px 14px; border: none; border-radius: 7px; cursor: pointer; white-space: nowrap; }
+  .btn-load2 { background: var(--wood-light); color: var(--wood-dark); }
+  .btn-pdf2 { background: #C0392B; color: white; }
+  .btn-wa2 { background: #25D366; color: white; }
+  .btn-del2 { background: #f2d5d2; color: var(--red); }
+
+  .empty-state { text-align: center; color: var(--muted); padding: 30px; font-size: 0.9rem; }
+  .tag { display: inline-block; background: var(--sawdust-dark); color: var(--muted);
+    font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; margin-left: 4px; }
+
+  @media (max-width: 600px) {
+    .companies-grid { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+
+<style>
+#auth-loading { position:fixed; inset:0; z-index:9999; background:#1a1a2e; display:flex; align-items:center; justify-content:center; color:#c9a84c; font-family:Cairo,sans-serif; font-size:18px; flex-direction:column; gap:12px; }
+body.checking-auth > *:not(#auth-loading) { display:none !important; }
+</style>
+</head>
+<body class="checking-auth">
+
+<div id="auth-loading">
+  <div>&#x1F512;</div>
+  <div>&#x62C;&#x627;&#x631;&#x64A; &#x627;&#x644;&#x62A;&#x62D;&#x642;&#x642;...</div>
+</div>
+
+
+<header>
+  <div class="header-inner">
+    <div class="header-top-bar">
+      <div class="header-logo">🏭</div>
+      <div class="header-divider"></div>
+      <div>
+        <div class="header-company-name">الشركة المصرية الخليجية للصناعات الخشبية</div>
+        <div class="header-company-sub">EGYPTIAN GULF WOOD INDUSTRIES</div>
+      </div>
+    </div>
+    <h1>📁 أرشيف الشركات والمواصفات</h1>
+    <p>كل مواصفاتك المحفوظة مرتبة حسب الشركة</p>
+  </div>
+</header>
+
+<div class="nav-bar">
+  <button class="nav-btn inactive" onclick="location.href='index.html'">🧮 الحاسبة</button>
+  <button class="nav-btn active">📁 الأرشيف</button>
+</div>
+
+<div class="container">
+
+  <!-- SEARCH -->
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="🔍 ابحث باسم الشركة أو المواصفة..." oninput="renderAll()">
+    <select id="sortSelect" onchange="renderAll()">
+      <option value="date">ترتيب: الأحدث</option>
+      <option value="name">ترتيب: الاسم</option>
+      <option value="price">ترتيب: السعر</option>
+    </select>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <span class="stat-val" id="statCompanies">0</span>
+      <span class="stat-lbl">إجمالي الشركات</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-val" id="statSpecs">0</span>
+      <span class="stat-lbl">إجمالي المواصفات</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-val" id="statLatest">—</span>
+      <span class="stat-lbl">آخر شركة أُضيفت</span>
+    </div>
+  </div>
+
+  <!-- COMPANIES GRID -->
+  <div class="companies-grid" id="companiesGrid"></div>
+
+  <!-- SPECS PANEL -->
+  <div class="specs-panel" id="specsPanel">
+    <div class="specs-panel-header">
+      <span class="specs-panel-title" id="specsPanelTitle">مواصفات الشركة</span>
+      <button class="specs-panel-close" onclick="closePanel()">✕ إغلاق</button>
+    </div>
+    <div class="specs-list" id="specsList"></div>
+  </div>
+
+</div>
+
+<script>
+  function fmt(n) { return n.toLocaleString('ar-EG',{minimumFractionDigits:2,maximumFractionDigits:2})+' جنيه'; }
+  function fmtM3(n) { return n.toFixed(6)+' م³'; }
+
+  function getSpecs() {
+    return JSON.parse(localStorage.getItem('palletSpecs') || '[]');
+  }
+
+  function groupByCompany(specs) {
+    const map = {};
+    specs.forEach(sp => {
+      const key = sp.companyName || 'غير محدد';
+      if (!map[key]) map[key] = [];
+      map[key].push(sp);
+    });
+    return map;
+  }
+
+  let activeCompany = null;
+
+  function renderAll() {
+    const specs   = getSpecs();
+    const query   = document.getElementById('searchInput').value.trim().toLowerCase();
+    const sort    = document.getElementById('sortSelect').value;
+
+    const filtered = query
+      ? specs.filter(sp =>
+          (sp.companyName||'').toLowerCase().includes(query) ||
+          (sp.specName||'').toLowerCase().includes(query))
+      : specs;
+
+    const grouped = groupByCompany(filtered);
+    const companies = Object.keys(grouped);
+
+    // Stats
+    document.getElementById('statCompanies').textContent = companies.length;
+    document.getElementById('statSpecs').textContent = filtered.length;
+    document.getElementById('statLatest').textContent = specs.length ? (specs[0].companyName || '—') : '—';
+
+    // Sort companies
+    companies.sort((a,b) => {
+      if (sort === 'name') return a.localeCompare(b,'ar');
+      if (sort === 'price') {
+        const avgA = grouped[a].reduce((s,x)=>s+x.totalCost,0)/grouped[a].length;
+        const avgB = grouped[b].reduce((s,x)=>s+x.totalCost,0)/grouped[b].length;
+        return avgB - avgA;
+      }
+      // date: by latest savedAt
+      return 0;
+    });
+
+    const grid = document.getElementById('companiesGrid');
+    if (!companies.length) {
+      grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">لا توجد مواصفات محفوظة بعد — ارجع للحاسبة واحفظ مواصفة أولاً 🪵</div>';
+      return;
+    }
+
+    grid.innerHTML = companies.map(company => {
+      const list = grouped[company];
+      const latest = list[0];
+      const minPrice = Math.min(...list.map(x=>x.totalCost));
+      const maxPrice = Math.max(...list.map(x=>x.totalCost));
+      const isActive = activeCompany === company;
+      return `
+        <div class="company-card ${isActive?'active':''}" onclick="selectCompany('${company.replace(/'/g,"\\'")}')">
+          <div class="company-card-header">
+            <span class="company-card-name">🏢 ${company}</span>
+            <span class="company-card-count">${list.length} مواصفة</span>
+          </div>
+          <div class="company-card-body">
+            <div class="company-latest">آخر مواصفة: <strong>${latest.specName}</strong></div>
+            <div class="company-latest" style="margin-top:3px;">بتاريخ: ${latest.savedAt}</div>
+            <div class="company-price-range">
+              ${minPrice===maxPrice
+                ? fmt(minPrice)
+                : fmt(minPrice) + ' — ' + fmt(maxPrice)}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Re-render panel if open
+    if (activeCompany && grouped[activeCompany]) {
+      renderPanel(activeCompany, grouped[activeCompany]);
+    } else if (activeCompany) {
+      closePanel();
+    }
+  }
+
+  function selectCompany(name) {
+    const specs = getSpecs();
+    const grouped = groupByCompany(specs);
+    if (activeCompany === name) { closePanel(); return; }
+    activeCompany = name;
+    renderAll();
+    renderPanel(name, grouped[name] || []);
+    setTimeout(() => document.getElementById('specsPanel').scrollIntoView({behavior:'smooth',block:'start'}), 100);
+  }
+
+  function renderPanel(company, list) {
+    document.getElementById('specsPanelTitle').textContent = '📋 مواصفات: ' + company + ' (' + list.length + ')';
+    const sort = document.getElementById('sortSelect').value;
+    const sorted = [...list].sort((a,b) => {
+      if (sort==='price') return b.totalCost - a.totalCost;
+      if (sort==='name') return (a.specName||'').localeCompare(b.specName||'','ar');
+      return 0;
+    });
+
+    document.getElementById('specsList').innerHTML = sorted.length ? sorted.map((sp,i) => {
+      const allSpecs = getSpecs();
+      const realIdx = allSpecs.findIndex(x => x.specName===sp.specName && x.companyName===sp.companyName && x.savedAt===sp.savedAt);
+      return `
+        <div class="spec-item">
+          <div class="spec-info">
+            <div class="spec-name">🪵 ${sp.specName}</div>
+            <div class="spec-meta">${sp.savedAt}</div>
+            <div class="spec-prices">
+              <div class="price-tag">
+                <span class="pt-lbl">تكلفة / بالتة</span>
+                <span class="pt-val">${sp.totalCost.toFixed(2)} ج</span>
+              </div>
+              ${sp.sellingPrice > sp.totalCost ? `
+              <div class="price-tag selling">
+                <span class="pt-lbl">سعر البيع</span>
+                <span class="pt-val">${sp.sellingPrice.toFixed(2)} ج</span>
+              </div>` : ''}
+              ${(sp.quantity||1) > 1 ? `
+              <div class="price-tag">
+                <span class="pt-lbl">الكمية</span>
+                <span class="pt-val">${sp.quantity} بالتة</span>
+              </div>
+              <div class="price-tag">
+                <span class="pt-lbl">إجمالي الطلبية</span>
+                <span class="pt-val">${(sp.totalCost*(sp.quantity||1)).toFixed(2)} ج</span>
+              </div>` : ''}
+            </div>
+          </div>
+          <div class="spec-actions">
+            <button class="btn-sm btn-load2" onclick="loadSpec(${realIdx})">✏️ تحميل</button>
+            <button class="btn-sm btn-pdf2"  onclick="pdfSpec(${realIdx})">📄 PDF</button>
+            <button class="btn-sm btn-wa2"   onclick="waSpec(${realIdx})">💬 واتساب</button>
+            <button class="btn-sm btn-del2"  onclick="delSpec(${realIdx})">🗑️ حذف</button>
+          </div>
+        </div>`;
+    }).join('') : '<div class="empty-state">لا توجد مواصفات لهذه الشركة</div>';
+
+    document.getElementById('specsPanel').classList.add('show');
+  }
+
+  function closePanel() {
+    activeCompany = null;
+    document.getElementById('specsPanel').classList.remove('show');
+    renderAll();
+  }
+
+  function loadSpec(i) {
+    localStorage.setItem('loadSpecIndex', i);
+    location.href = 'index.html';
+  }
+
+  function delSpec(i) {
+    if (!confirm('هل أنت متأكد من حذف هذه المواصفة؟')) return;
+    const specs = getSpecs();
+    const company = specs[i]?.companyName;
+    specs.splice(i, 1);
+    localStorage.setItem('palletSpecs', JSON.stringify(specs));
+    // check if company still exists
+    const still = specs.some(x => x.companyName === company);
+    if (!still) closePanel();
+    else { renderAll(); }
+  }
+
+  function pdfSpec(i) {
+    const sp = getSpecs()[i];
+    if (!sp) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    const W=210, H=297;
+    const brown=[92,61,30], brownL=[196,154,108], cream=[245,237,216], darkText=[26,17,9];
+    let y=0;
+    doc.setFillColor(92,61,30); doc.rect(0,0,W,42,'F');
+    doc.setFillColor(92,61,30); doc.rect(0,42,W,1.5,'F');
+    doc.setTextColor(255,228,181); doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.text('Al-Masriya Al-Khaleejiya Wood Industries', W/2,13,{align:'center'});
+    doc.setFontSize(7.5); doc.setTextColor(92,61,30);
+    doc.text('EGYPTIAN GULF WOOD INDUSTRIES', W/2,19,{align:'center'});
+    doc.setTextColor(245,237,216); doc.setFontSize(12); doc.setFont('helvetica','bold');
+    doc.text('Pallet Cost Report', W/2,30,{align:'center'});
+    doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('احسب - وفر - انجح', W/2,37,{align:'center'});
+    y=50;
+    doc.setFillColor(245,237,216); doc.roundedRect(10,y,W-20,18,2,2,'F');
+    doc.setTextColor(26,17,9); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text('Spec:', 15,y+7); doc.setFont('helvetica','normal'); doc.text(sp.specName||'—',35,y+7);
+    doc.setFont('helvetica','bold'); doc.text('Client:', 15,y+13); doc.setFont('helvetica','normal'); doc.text(sp.companyName||'—',40,y+13);
+    doc.setFont('helvetica','bold'); doc.text('Date:', 150,y+7); doc.setFont('helvetica','normal'); doc.text(sp.savedAt,165,y+7);
+    doc.text('Qty: '+(sp.quantity||1), 165,y+13);
+    y+=26;
+    function sRow(label,val,sub=false){
+      doc.setFillColor(sub?250:255,sub?248:253,sub?240:248);
+      doc.rect(10,y,W-20,7,'F');
+      doc.setTextColor(26,17,9); doc.setFontSize(sub?8:9);
+      doc.setFont('helvetica',sub?'normal':'bold'); doc.text(label,sub?18:15,y+5);
+      doc.setFont('helvetica','normal'); doc.text(String(val),W-12,y+5,{align:'right'});
+      doc.setDrawColor(234,217,184); doc.line(10,y+7,W-10,y+7);
+      y+=7;
+    }
+    function tRow(label,val,hi){
+      if(hi){ doc.setFillColor(92,61,30); } else { doc.setFillColor(245,237,216); }
+      doc.roundedRect(10,y,W-20,9,1,1,'F');
+      if(hi){ doc.setTextColor(92,61,30); } else { doc.setTextColor(26,17,9); }
+      doc.setFontSize(10); doc.setFont('helvetica','bold');
+      doc.text(label,15,y+6.5); doc.text(String(val),W-12,y+6.5,{align:'right'});
+      y+=13;
+    }
+    doc.setFillColor(92,61,30); doc.roundedRect(10,y,W-20,8,1,1,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text('Wood Cost',15,y+5.5); y+=12;
+    const vol1=(sp.p1_qty||0)*(sp.p1_l||0)*(sp.p1_w||0)*(sp.p1_t||0)/1000000;
+    const vol2=(sp.p2_qty||0)*(sp.p2_l||0)*(sp.p2_w||0)*(sp.p2_t||0)/1000000;
+    const vol3=(sp.p3_qty||0)*(sp.p3_l||0)*(sp.p3_w||0)*(sp.p3_t||0)/1000000;
+    const vol4=(sp.p4_qty||0)*(sp.p4_l||0)*(sp.p4_w||0)*(sp.p4_t||0)/1000000;
+    const totalVol=vol1+vol2+vol3+vol4;
+    sRow('Total Volume (m3):',totalVol.toFixed(6)+' m3');
+    if(vol1>0) sRow('  Qawa\'em:',vol1.toFixed(6)+' m3',true);
+    if(vol2>0) sRow('  Alwah:',vol2.toFixed(6)+' m3',true);
+    if(vol3>0) sRow('  Awarid Rabt:',vol3.toFixed(6)+' m3',true);
+    if(vol4>0) sRow('  Additional Boards:',vol4.toFixed(6)+' m3',true);
+    sRow('Wood Price /m3:',(sp.woodPrice||0).toFixed(2)+' EGP');
+    tRow('Wood Cost / Pallet:',(sp.woodPrice*totalVol).toFixed(2)+' EGP');
+    doc.setFillColor(92,61,30); doc.roundedRect(10,y,W-20,8,1,1,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text('Additional Costs',15,y+5.5); y+=12;
+    const extras=[{k:'costNails',l:'Nails'},{k:'costLabor',l:'Labor'},{k:'costElec',l:'Electricity'},{k:'costSteam',l:'Steaming'},{k:'costTransport',l:'Transport'},{k:'costOther',l:'Other'}];
+    extras.forEach(e=>{ if(sp[e.k]>0) sRow(e.l+':',(sp[e.k]||0).toFixed(2)+' EGP'); });
+    const extra=(sp.costNails||0)+(sp.costLabor||0)+(sp.costElec||0)+(sp.costSteam||0)+(sp.costTransport||0)+(sp.costOther||0);
+    tRow('Total Additional:',(extra).toFixed(2)+' EGP');
+    doc.setFillColor(92,61,30); doc.roundedRect(10,y,W-20,8,1,1,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text('Summary',15,y+5.5); y+=12;
+    tRow('Cost / Pallet:',(sp.totalCost||0).toFixed(2)+' EGP');
+    if((sp.profitMargin||0)>0){
+      sRow('Profit ('+sp.profitMargin+'%):',((sp.totalCost||0)*(sp.profitMargin/100)).toFixed(2)+' EGP');
+      tRow('Selling Price:',(sp.sellingPrice||0).toFixed(2)+' EGP',true);
+    }
+    if((sp.quantity||1)>1){
+      sRow('Quantity:',sp.quantity+' pallets');
+      tRow('Total Order Cost:',((sp.totalCost||0)*(sp.quantity||1)).toFixed(2)+' EGP',true);
+    }
+    doc.setFillColor(92,61,30); doc.rect(0,H-14,W,14,'F');
+    doc.setTextColor(92,61,30); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+    doc.text('Egyptian Gulf Wood Industries  |  Pallet Cost Calculator',W/2,H-8,{align:'center'});
+    doc.text(sp.savedAt,W/2,H-4,{align:'center'});
+    doc.save('تسعير-'+sp.specName+'.pdf');
+  }
+
+  function waSpec(i) {
+    const sp = getSpecs()[i];
+    if (!sp) return;
+    const qty = sp.quantity || 1;
+    let msg = '🏭 *الشركة المصرية الخليجية للصناعات الخشبية*\n';
+    msg += '━━━━━━━━━━━━━━━━━━\n';
+    msg += '📋 *تقرير تسعير البالتة*\n\n';
+    msg += `📌 المواصفة: *${sp.specName}*\n`;
+    msg += `🏢 العميل: *${sp.companyName}*\n`;
+    msg += `📅 التاريخ: ${sp.savedAt}\n\n`;
+    msg += '━━━━━━━━━━━━━━━━━━\n';
+    msg += `💵 *تكلفة البالتة الواحدة: ${(sp.totalCost||0).toFixed(2)} جنيه*\n`;
+    if ((sp.profitMargin||0)>0)
+      msg += `🏷️ *سعر البيع: ${(sp.sellingPrice||0).toFixed(2)} جنيه*\n`;
+    if (qty > 1) {
+      msg += `📦 الكمية: ${qty} بالتة\n`;
+      msg += `💰 *إجمالي الطلبية: ${((sp.totalCost||0)*qty).toFixed(2)} جنيه*\n`;
+    }
+    msg += '━━━━━━━━━━━━━━━━━━';
+    window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+  }
+
+  renderAll();
+</script>
+
+<script>
+(function(){
+  var SURL = 'https://chkiyrqlloufzahdktzs.supabase.co';
+  var SKEY = 'sb_publishable_6ZxUW8NESoxyrDQe_KE5mA_XX-aZFZQ';
+  var sb   = supabase.createClient(SURL, SKEY);
+
+  var sess = sessionStorage.getItem('sb_user_pallet');
+  if(!sess){
+    // Not logged in — redirect to main calculator to login
+    window.location.href = 'index.html';
+    return;
+  }
+
+  // Load latest specs from Supabase before showing archive
+  async function loadAndShow(){
+    try {
+      var timeout = new Promise(function(_,rej){ setTimeout(function(){rej('t');},5000); });
+      var query = sb.from('pallet_data').select('data').eq('user_id', sess).maybeSingle();
+      var res = await Promise.race([query, timeout]);
+      if(res && res.data && res.data.data && res.data.data.specs){
+        localStorage.setItem('palletSpecs', JSON.stringify(res.data.data.specs));
+      }
+    } catch(e){ console.log('load skipped:', e); }
+    document.body.classList.remove('checking-auth');
+    if(typeof renderAll === 'function') renderAll();
+  }
+
+  loadAndShow();
+})();
+</script>
+
+</body>
+</html>
