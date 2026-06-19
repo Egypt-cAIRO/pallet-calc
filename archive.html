@@ -470,7 +470,7 @@ body.checking-auth > *:not(#auth-loading) { display:none !important; }
     window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
   }
 
-  renderAll();
+  // renderAll() now called after auth+load (see below)
 </script>
 
 <script>
@@ -480,8 +480,9 @@ body.checking-auth > *:not(#auth-loading) { display:none !important; }
   var sb   = supabase.createClient(SURL, SKEY);
 
   var sess = sessionStorage.getItem('sb_user_pallet');
+  console.log('Archive auth check, session:', sess);
   if(!sess){
-    // Not logged in — redirect to main calculator to login
+    console.log('No session found, redirecting to index.html');
     window.location.href = 'index.html';
     return;
   }
@@ -492,12 +493,18 @@ body.checking-auth > *:not(#auth-loading) { display:none !important; }
       var timeout = new Promise(function(_,rej){ setTimeout(function(){rej('t');},5000); });
       var query = sb.from('pallet_data').select('data').eq('user_id', sess).maybeSingle();
       var res = await Promise.race([query, timeout]);
+      console.log('Archive data loaded:', res);
       if(res && res.data && res.data.data && res.data.data.specs){
         localStorage.setItem('palletSpecs', JSON.stringify(res.data.data.specs));
       }
     } catch(e){ console.log('load skipped:', e); }
     document.body.classList.remove('checking-auth');
-    if(typeof renderAll === 'function') renderAll();
+    console.log('checking-auth removed, calling renderAll');
+    if(typeof renderAll === 'function') {
+      renderAll();
+    } else {
+      console.error('renderAll is not defined!');
+    }
   }
 
   loadAndShow();
